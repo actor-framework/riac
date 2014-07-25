@@ -25,19 +25,20 @@ struct cpu_info {
   uint64_t  mhz_per_core;
 };
 
-struct net_info {
-  std::string               mac;
-  std::string               ipv4;
-  std::vector<std::string>  ipv6;
+// send on connect from ActorProbe to ActorNexus
+struct interface_info {
+  std::string               hw_addr;
+  std::string               ipv4_addr;
+  std::vector<std::string>  ipv6_addr;
 };
 
 // send on connect from ActorProbe to ActorNexus
 struct node_info {
-  node_id                   id;
-  std::vector<cpu_info>     cpu;
-  std::string               hostname;
-  std::string               os;
-  std::vector<net_info>     net_infos;
+  node_id                     id;
+  std::vector<cpu_info>       cpu;
+  std::string                 hostname;
+  std::string                 os;
+  std::vector<interface_info> interfaces;
 };
 
 // send from ActorProbe to ActorNexus whenever from learns a new direct or
