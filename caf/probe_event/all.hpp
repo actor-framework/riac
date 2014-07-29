@@ -20,4 +20,6 @@
 #ifndef CAF_PROBE_EVENT_ALL_HPP
 #define CAF_PROBE_EVENT_ALL_HPP
 
+#include "caf/probe_event/probe_event.hpp"
+
 #endif // CAF_PROBE_EVENT_ALL_HPP
