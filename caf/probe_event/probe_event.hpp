@@ -76,7 +76,7 @@ struct new_message {
   message   msg;
 };
 
-inline void announce_all() {
+inline void announce_types() {
 }
 
 } // namespace probe_event
