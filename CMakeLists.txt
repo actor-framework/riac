@@ -10,9 +10,9 @@ set (PROBE_SRCS
      src/init.cpp)
 
 # build shared library if not compiling static only
-if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
+if(NOT CAF_BUILD_STATIC_ONLY)
   add_library(libcaf_probe SHARED ${PROBE_SRCS} ${PROBE_HDRS})
-  target_link_libraries(libcaf_probe ${LD_FLAGS} ${LIBCAF_CORE_LIBRARY})
+  target_link_libraries(libcaf_probe ${LD_FLAGS} ${LIBCAF_LIBRARIES})
   set(LIBRARY_SOVERSION ${CAF_VERSION_MAJOR})
   set_target_properties(libcaf_probe
                         PROPERTIES
@@ -25,7 +25,7 @@ if (NOT "${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes")
 endif ()
 
 # build static library only if --build-static or --build-static-only was set
-if ("${CAF_BUILD_STATIC_ONLY}" STREQUAL "yes" OR "${CAF_BUILD_STATIC}" STREQUAL "yes")
+if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
   add_library(libcaf_probeStatic STATIC ${PROBE_HDRS} ${PROBE_SRCS})
   set_target_properties(libcaf_probeStatic PROPERTIES OUTPUT_NAME caf_probe_static)
   install(TARGETS libcaf_probeStatic ARCHIVE DESTINATION lib)
