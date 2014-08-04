@@ -23,7 +23,7 @@
 namespace caf {
 namespace probe {
 
-void init(int argc, char** argv);
+bool init(int argc, char** argv);
 
 } // namespace probe
 } // namespace caf

@@ -19,6 +19,10 @@
 
 #include "caf/probe/init.hpp"
 
+#include <cstring>
+#include <fstream>
+#include <iostream>
+
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 #include "caf/probe_event/all.hpp"
@@ -26,14 +30,16 @@
 namespace caf {
 namespace probe {
 
+namespace {
+
 class fwd_hook : public io::hook {
  public:
-  fwd_hook(actor nexus) : m_uplink(nexus) {
+  fwd_hook(probe_event::nexus_type uplink) : self(true), m_uplink(uplink) {
     // nop
   }
   template<class T, class... Ts>
   void transmit(Ts&&... args) {
-    anon_send(m_uplink, T{std::forward<Ts>(args)...});
+    self->send(m_uplink, T{std::forward<Ts>(args)...});
   }
   void message_received_cb(const node_id& src, const actor_addr& from,
                            const actor_addr& dest, message_id mid,
@@ -46,6 +52,10 @@ class fwd_hook : public io::hook {
   void message_sent_cb(const actor_addr& from, const node_id& hop,
                        const actor_addr& dest, message_id mid,
                        const message& msg) override {
+    if (dest == m_uplink) {
+      // let's avoid endless recursion, shall we?
+      return;
+    }
     transmit<probe_event::new_message>(from.node(), dest.node(), from.id(),
                                        dest.id(), msg);
     call_next<message_sent>(from, hop, dest, mid, msg);
@@ -81,14 +91,12 @@ class fwd_hook : public io::hook {
   }
 
   void new_connection_established_cb(const node_id& node) override {
-    transmit<probe_event::new_route>(detail::singletons::get_node_id(),
-                                     node, true);
+    transmit<probe_event::new_route>(node, true);
     call_next<new_connection_established>(node);
   }
 
   void new_route_added_cb(const node_id& via, const node_id& node) override {
-    transmit<probe_event::new_route>(detail::singletons::get_node_id(),
-                                     node, false);
+    transmit<probe_event::new_route>(node, false);
     call_next<new_route_added>(via, node);
   }
 
@@ -101,19 +109,62 @@ class fwd_hook : public io::hook {
   }
 
  private:
-  actor m_uplink;
+  scoped_actor self;
+  probe_event::nexus_type m_uplink;
 };
 
-behavior nexus_broker(io::broker* self, io::connection_handle conn) {
-  return {
-    // TODO: implement me
-  };
+struct probe_config {
+  uint16_t port;
+  std::string host;
+  std::string config_file_path;
+  inline probe_config() : port(0) { }
+  inline bool valid() const {
+    return !host.empty() && port != 0;
+  }
+};
+
+//const char conf_file_arg[] = "--caf_probe_config_file=";
+const char host_arg[] = "--caf_probe_host=";
+const char port_arg[] = "--caf_probe_port=";
+
+template<size_t Size>
+bool is_substr(const char (&needle)[Size], const char* haystack) {
+  // compare without null terminator
+  if (strncmp(needle, haystack, Size - 1) == 0) {
+    return true;
+  }
+  return false;
 }
 
-void init(int argc, char** argv) {
+template<size_t Size>
+size_t cstr_len(const char (&)[Size]) {
+  return Size - 1;
+}
+
+void from_args(probe_config& conf, int argc, char** argv) {
+  for (auto i = argv; i != argv + argc; ++i) {
+    if (is_substr(host_arg, *i)) {
+      conf.host.assign(*i + cstr_len(host_arg));
+    } else if (is_substr(port_arg, *i)) {
+      int p = std::stoi(*i + cstr_len(port_arg));
+      conf.port = static_cast<uint16_t>(p);
+    }
+  }
+}
+
+} // namespace <anonymous>
+
+bool init(int argc, char** argv) {
   probe_event::announce_types();
-  auto uplink = io::spawn_io_client(nexus_broker, "localhost", 4242);
+  probe_config conf;
+  from_args(conf, argc, argv);
+  if (!conf.valid()) {
+    return false;
+  }
+  auto uplink = io::typed_remote_actor<probe_event::nexus_type>(conf.host,
+                                                                conf.port);
   io::middleman::instance()->add_hook<fwd_hook>(uplink);
+  return true;
 }
 
 } // namespace probe
