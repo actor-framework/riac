@@ -62,7 +62,7 @@ class fwd_hook : public io::hook {
   }
 
   void message_forwarded_cb(const node_id& from, const node_id& dest,
-                            std::vector<char>* payload) override {
+                            const std::vector<char>* payload) override {
     // do nothing (yet)
     call_next<message_forwarded>(from, dest, payload);
   }
@@ -75,7 +75,7 @@ class fwd_hook : public io::hook {
   }
 
   void message_forwarding_failed_cb(const node_id& from, const node_id& to,
-                                    std::vector<char>* payload) override {
+                                    const std::vector<char>* payload) override {
     // do nothing (yet)
     call_next<message_forwarding_failed>(from, to, payload);
   }
@@ -169,4 +169,3 @@ bool init(int argc, char** argv) {
 
 } // namespace probe
 } // namespace caf
-
