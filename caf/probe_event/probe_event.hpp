@@ -23,6 +23,7 @@
 
 #include "caf/actor.hpp"
 #include "caf/node_id.hpp"
+#include "caf/optional.hpp"
 #include "caf/typed_actor.hpp"
 
 namespace caf {
@@ -88,7 +89,7 @@ struct new_route {
 };
 
 inline bool operator==(const new_route& lhs, const new_route& rhs) {
-  return lhs.to == rhs.to && lhs.is_direct == rhs.is_direct;
+  return lhs.to == rhs.to&& lhs.is_direct == rhs.is_direct;
 }
 
 struct route_lost {
@@ -100,11 +101,11 @@ inline bool operator==(const route_lost& lhs, const route_lost& rhs) {
 }
 
 struct new_message {
-  node_id   source_node;
-  node_id   dest_node;
-  actor_id  source_actor;
-  actor_id  dest_actor;
-  message   msg;
+  node_id           source_node;
+  node_id           dest_node;
+  actor_id          source_actor;
+  actor_id          dest_actor;
+  optional<message> msg;
 };
 
 inline bool operator==(const new_message& lhs, const new_message& rhs) {
