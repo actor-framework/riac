@@ -30,20 +30,20 @@ namespace caf {
 namespace probe_event {
 
 struct cpu_info {
-  node_id   source;
+  node_id   source_node;
   uint64_t  num_cores;
   uint64_t  mhz_per_core;
 };
 
 inline bool operator==(const cpu_info& lhs, const cpu_info& rhs) {
-  return lhs.source == rhs.source
+  return lhs.source_node == rhs.source_node
          && lhs.num_cores == rhs.num_cores
          && lhs.mhz_per_core == rhs.mhz_per_core;
 }
 
 // send on connect from ActorProbe to ActorNexus
 struct interface_info {
-  node_id                   source;
+  node_id                   source_node;
   std::string               hw_addr;
   std::string               ipv4_addr;
   std::vector<std::string>  ipv6_addr;
@@ -57,7 +57,7 @@ inline bool operator==(const interface_info& lhs, const interface_info& rhs) {
 
 // send on connect from ActorProbe to ActorNexus
 struct node_info {
-  node_id                     id;
+  node_id                     source_node;
   std::vector<cpu_info>       cpu;
   std::string                 hostname;
   std::string                 os;
@@ -65,7 +65,7 @@ struct node_info {
 };
 
 inline bool operator==(const node_info& lhs, const node_info& rhs) {
-  return lhs.id == rhs.id
+  return lhs.source_node == rhs.source_node
          && lhs.cpu == rhs.cpu
          && lhs.hostname == rhs.hostname
          && lhs.os == rhs.os
@@ -74,27 +74,27 @@ inline bool operator==(const node_info& lhs, const node_info& rhs) {
 
 // send periodically from ActorProbe to ActorNexus
 struct ram_usage {
-  node_id  source;
+  node_id  source_node;
   uint64_t in_use;
   uint64_t available;
 };
 
 inline bool operator==(const ram_usage& lhs, const ram_usage& rhs) {
-  return lhs.source == rhs.source
+  return lhs.source_node == rhs.source_node
          && lhs.in_use == rhs.in_use
          && lhs.available == rhs.available;
 }
 
 // send periodically from ActorProbe to ActorNexus
 struct work_load {
-  node_id   source;
+  node_id   source_node;
   uint8_t   cpu_load;      // in percent, i.e., 0-100
   uint64_t  num_processes;
   uint64_t  num_actors;
 };
 
 inline bool operator==(const work_load& lhs, const work_load& rhs) {
-  return lhs.source == rhs.source
+  return lhs.source_node == rhs.source_node
          && lhs.cpu_load == rhs.cpu_load
          && lhs.num_processes == rhs.num_processes
          && lhs.num_actors == rhs.num_actors;
@@ -103,7 +103,7 @@ inline bool operator==(const work_load& lhs, const work_load& rhs) {
 // send from ActorProbe to ActorNexus whenever from learns a new direct or
 // indirect route to another node
 struct new_route {
-  node_id source;
+  node_id source_node;
   node_id dest;
   bool    is_direct;
 };
@@ -113,7 +113,7 @@ inline bool operator==(const new_route& lhs, const new_route& rhs) {
 }
 
 struct route_lost {
-  node_id source;
+  node_id source_node;
   node_id dest;
 };
 
@@ -177,10 +177,11 @@ using nexus_type = sink::extend<
  */
 inline void announce_types() {
   announce<cpu_info>(&cpu_info::num_cores, &cpu_info::mhz_per_core);
-  announce<interface_info>(&interface_info::source, &interface_info::hw_addr,
+  announce<interface_info>(&interface_info::source_node, &interface_info::hw_addr,
                            &interface_info::ipv4_addr,
                            &interface_info::ipv6_addr);
-  announce<node_info>(&node_info::id, &node_info::cpu, &node_info::hostname,
+  announce<node_info>(&node_info::source_node, &node_info::cpu,
+                      &node_info::hostname,
                       &node_info::os, &node_info::interfaces);
   announce<ram_usage>(&ram_usage::available, &ram_usage::in_use);
   announce<work_load>(&work_load::cpu_load, &work_load::num_actors,
