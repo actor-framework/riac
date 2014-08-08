@@ -170,7 +170,10 @@ bool init(int argc, char** argv) {
   auto uplink = io::typed_remote_actor<probe_event::nexus_type>(conf.host,
                                                                 conf.port);
   io::middleman::instance()->add_hook<fwd_hook>(uplink);
-  // TODO: send initial node info
+  // TODO: add interface infos to node_info
+  probe_event::node_info nd;
+  nd.source_node = detail::singletons::get_node_id();
+  anon_send(uplink, nd);
   spawn<hidden>([uplink](event_based_actor* self) -> behavior {
     self->send(self, atom("poll"));
     return {
