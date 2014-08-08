@@ -27,6 +27,8 @@
 #include "caf/io/all.hpp"
 #include "caf/probe_event/all.hpp"
 
+#include "caf/detail/singletons.hpp"
+
 namespace caf {
 namespace probe {
 
@@ -34,12 +36,15 @@ namespace {
 
 class fwd_hook : public io::hook {
  public:
-  fwd_hook(probe_event::nexus_type uplink) : self(true), m_uplink(uplink) {
+  fwd_hook(probe_event::nexus_type uplink)
+      : m_self(true),
+        m_uplink(uplink),
+        m_node(detail::singletons::get_node_id()) {
     // nop
   }
   template<class T, class... Ts>
   void transmit(Ts&&... args) {
-    self->send(m_uplink, T{std::forward<Ts>(args)...});
+    m_self->send(m_uplink, T{std::forward<Ts>(args)...});
   }
   void message_received_cb(const node_id& src, const actor_addr& from,
                            const actor_addr& dest, message_id mid,
@@ -90,14 +95,14 @@ class fwd_hook : public io::hook {
     call_next<new_remote_actor>(addr);
   }
 
-  void new_connection_established_cb(const node_id& node) override {
-    transmit<probe_event::new_route>(node, true);
-    call_next<new_connection_established>(node);
+  void new_connection_established_cb(const node_id& dest) override {
+    transmit<probe_event::new_route>(m_node, dest, true);
+    call_next<new_connection_established>(dest);
   }
 
-  void new_route_added_cb(const node_id& via, const node_id& node) override {
-    transmit<probe_event::new_route>(node, false);
-    call_next<new_route_added>(via, node);
+  void new_route_added_cb(const node_id& via, const node_id& dest) override {
+    transmit<probe_event::new_route>(m_node, dest, false);
+    call_next<new_route_added>(via, dest);
   }
 
   void invalid_message_received_cb(const node_id& source,
@@ -109,8 +114,9 @@ class fwd_hook : public io::hook {
   }
 
  private:
-  scoped_actor self;
+  scoped_actor m_self;
   probe_event::nexus_type m_uplink;
+  node_id m_node;
 };
 
 struct probe_config {
@@ -164,6 +170,16 @@ bool init(int argc, char** argv) {
   auto uplink = io::typed_remote_actor<probe_event::nexus_type>(conf.host,
                                                                 conf.port);
   io::middleman::instance()->add_hook<fwd_hook>(uplink);
+  // TODO: send initial node info
+  spawn<hidden>([uplink](event_based_actor* self) -> behavior {
+    self->send(self, atom("poll"));
+    return {
+      on(atom("poll")) >> [self] {
+        self->delayed_send(self, std::chrono::seconds(1), atom("poll"));
+        // TODO: collect RAM and CPU usage + send to uplink
+      }
+    };
+  });
   return true;
 }
 
