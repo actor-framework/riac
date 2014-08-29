@@ -7,7 +7,8 @@ file(GLOB PROBE_HDRS "caf/probe/*.hpp")
 
 # list cpp files excluding platform-dependent files
 set (PROBE_SRCS
-     src/init.cpp)
+     src/init.cpp
+     src/if.cpp)
 
 # build shared library if not compiling static only
 if(NOT CAF_BUILD_STATIC_ONLY)

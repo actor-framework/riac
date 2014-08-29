@@ -23,8 +23,11 @@
 #include <fstream>
 #include <iostream>
 
+#include <unistd.h>
+
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
+#include "caf/probe/if.hpp"
 #include "caf/probe_event/all.hpp"
 
 #include "caf/detail/singletons.hpp"
@@ -130,8 +133,8 @@ struct probe_config {
 };
 
 //const char conf_file_arg[] = "--caf_probe_config_file=";
-const char host_arg[] = "--caf_probe_host=";
-const char port_arg[] = "--caf_probe_port=";
+const char host_arg[] = "--caf-probe-host=";
+const char port_arg[] = "--caf-probe-port=";
 
 template<size_t Size>
 bool is_substr(const char (&needle)[Size], const char* haystack) {
@@ -160,6 +163,12 @@ void from_args(probe_config& conf, int argc, char** argv) {
 
 } // namespace <anonymous>
 
+std::string hostname() {
+  char hostname[30];
+  gethostname(hostname, sizeof(hostname));
+  return std::string(hostname);
+}
+
 bool init(int argc, char** argv) {
   probe_event::announce_types();
   probe_config conf;
@@ -170,10 +179,21 @@ bool init(int argc, char** argv) {
   auto uplink = io::typed_remote_actor<probe_event::nexus_type>(conf.host,
                                                                 conf.port);
   io::middleman::instance()->add_hook<fwd_hook>(uplink);
-  // TODO: add interface infos to node_info
-  probe_event::node_info nd;
-  nd.source_node = detail::singletons::get_node_id();
-  anon_send(uplink, nd);
+  probe_event::node_info ni;
+  ni.source_node = detail::singletons::get_node_id();
+  auto interface_names = interface::ifnames();
+  for (auto name : interface_names) {
+    probe_event::interface_info ii;
+    ii.source_node  = ni.source_node;
+    ii.name         = name;
+    ii.hw_addr      = interface::hw_addr(name);
+    ii.ipv4_addr    = interface::ipv4_addr(name);
+    ii.ipv6_addr.push_back(interface::ipv6_addr(name));
+    ni.interfaces.push_back(ii);
+  }
+  ni.hostname = hostname();
+  std::cout << "send " << hostname() << std::endl;
+  anon_send(uplink, ni);
   spawn<hidden>([uplink](event_based_actor* self) -> behavior {
     self->send(self, atom("poll"));
     return {
