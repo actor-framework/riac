@@ -20,6 +20,7 @@
 #ifndef CAF_PROBE_IF_HPP
 #define CAF_PROBE_IF_HPP
 
+#include <map>
 #include <string>
 #include <vector>
 #include <iomanip>
@@ -39,14 +40,18 @@
 
 namespace caf {
 namespace probe {
-namespace interface {
 
-std::vector<std::string> ifnames();
-std::string hw_addr(const std::string& name);
-std::string ipv4_addr(const std::string& name);
-std::string ipv6_addr(const std::string& name);
+enum interface_type {
+  ethernet,
+  ipv4,
+  ipv6
+};
 
-} // namespace interface
+typedef std::map
+  <std::string, std::map<interface_type, std::vector<std::string>>> interfaces;
+
+interfaces get_interfaces();
+
 } // namespace probe
 } // namespace caf
 

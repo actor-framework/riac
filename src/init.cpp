@@ -9,8 +9,7 @@
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
- * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * (at your option) under the terms and conditions of the Boost Software      * * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -27,7 +26,7 @@
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
-#include "caf/probe/if.hpp"
+#include "caf/probe/interfaces.hpp"
 #include "caf/probe_event/all.hpp"
 
 #include "caf/detail/singletons.hpp"
@@ -181,18 +180,23 @@ bool init(int argc, char** argv) {
   io::middleman::instance()->add_hook<fwd_hook>(uplink);
   probe_event::node_info ni;
   ni.source_node = detail::singletons::get_node_id();
-  auto interface_names = interface::ifnames();
-  for (auto name : interface_names) {
+  interfaces iflist = get_interfaces();
+  for (auto interface : iflist) {
     probe_event::interface_info ii;
-    ii.source_node  = ni.source_node;
-    ii.name         = name;
-    ii.hw_addr      = interface::hw_addr(name);
-    ii.ipv4_addr    = interface::ipv4_addr(name);
-    ii.ipv6_addr.push_back(interface::ipv6_addr(name));
+    ii.name = interface.first;
+    auto prop = interface.second;
+    for (auto p : prop) {
+      if (p.first == interface_type::ethernet) {
+        ii.hw_addr = p.second.back();
+      } else if (p.first == interface_type::ipv4) {
+        ii.ipv4_addr = p.second.back();
+      } else if (p.first == interface_type::ipv6) {
+        ii.ipv6_addrs = p.second;
+      }
+    }
     ni.interfaces.push_back(ii);
   }
   ni.hostname = hostname();
-  std::cout << "send " << hostname() << std::endl;
   anon_send(uplink, ni);
   spawn<hidden>([uplink](event_based_actor* self) -> behavior {
     self->send(self, atom("poll"));
