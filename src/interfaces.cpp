@@ -1,9 +1,5 @@
-#include "caf/probe/if.hpp"
-
-#include <memory>
-#include <errno.h>
-
 #include "caf/optional.hpp"
+#include "caf/probe/interfaces.hpp"
 
 namespace {
 
