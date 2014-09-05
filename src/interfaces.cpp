@@ -3,8 +3,8 @@
 
 namespace {
 
-constexpr const char invalid_ipv4[] = "0.0.0.0";
-constexpr const char invalid_ipv6[] = "::1";
+constexpr const char* invalid_ipv4 = "0.0.0.0";
+constexpr const char* invalid_ipv6 = "::1";
 
 } // namespace <anonymous>
 
@@ -106,14 +106,15 @@ interfaces get_interfaces() {
   auto if_names = interface_names();
   for (auto interface_name : if_names) {
     std::map<interface_type, std::vector<string>> prop;
-    prop.emplace(interface_type::ethernet, hw_addr(interface_name));
+    prop.insert(std::make_pair(interface_type::ethernet,
+                               hw_addr(interface_name)));
     auto ifa = getifaddrs_uniqueptr();
     if (ifa) {
       auto ipv4s = fill_ips<sockaddr_in, AF_INET>(ifa->get(), interface_name);
-      prop.emplace(interface_type::ipv4, ipv4s);
+      prop.insert(std::make_pair(interface_type::ipv4, ipv4s));
       auto ipv6s = fill_ips<sockaddr_in6, AF_INET6>(ifa->get(), interface_name);
-      prop.emplace(interface_type::ipv6, ipv6s);
-      accu.emplace(interface_name, prop);
+      prop.insert(std::make_pair(interface_type::ipv6, ipv6s));
+      accu.insert(std::make_pair(interface_name, prop));
     }
   }
   return accu;
