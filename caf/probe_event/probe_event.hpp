@@ -44,15 +44,17 @@ inline bool operator==(const cpu_info& lhs, const cpu_info& rhs) {
 // send on connect from ActorProbe to ActorNexus
 struct interface_info {
   node_id                   source_node;
+  std::string               name;
   std::string               hw_addr;
   std::string               ipv4_addr;
-  std::vector<std::string>  ipv6_addr;
+  std::vector<std::string>  ipv6_addrs;
 };
 
 inline bool operator==(const interface_info& lhs, const interface_info& rhs) {
   return lhs.hw_addr == rhs.hw_addr
+         && lhs.name == rhs.name
          && lhs.ipv4_addr == rhs.ipv4_addr
-         && lhs.ipv6_addr == rhs.ipv6_addr;
+         && lhs.ipv6_addrs == rhs.ipv6_addrs;
 }
 
 // send on connect from ActorProbe to ActorNexus
@@ -177,9 +179,11 @@ using nexus_type = sink::extend<
  */
 inline void announce_types() {
   announce<cpu_info>(&cpu_info::num_cores, &cpu_info::mhz_per_core);
-  announce<interface_info>(&interface_info::source_node, &interface_info::hw_addr,
+  announce<interface_info>(&interface_info::source_node,
+                           &interface_info::name,
+                           &interface_info::hw_addr,
                            &interface_info::ipv4_addr,
-                           &interface_info::ipv6_addr);
+                           &interface_info::ipv6_addrs);
   announce<node_info>(&node_info::source_node, &node_info::cpu,
                       &node_info::hostname,
                       &node_info::os, &node_info::interfaces);
