@@ -17,12 +17,16 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#ifndef CAF_PROBE_EVENT_HPP
+#define CAF_PROBE_EVENT_HPP
+
 #include <string>
 #include <vector>
 #include <cstdint>
 
 #include "caf/actor.hpp"
 #include "caf/node_id.hpp"
+#include "caf/announce.hpp"
 #include "caf/optional.hpp"
 #include "caf/typed_actor.hpp"
 
@@ -41,29 +45,24 @@ inline bool operator==(const cpu_info& lhs, const cpu_info& rhs) {
          && lhs.mhz_per_core == rhs.mhz_per_core;
 }
 
-// send on connect from ActorProbe to ActorNexus
-struct interface_info {
-  node_id                   source_node;
-  std::string               name;
-  std::string               hw_addr;
-  std::string               ipv4_addr;
-  std::vector<std::string>  ipv6_addrs;
+enum class protocol {
+  ethernet,
+  ipv4,
+  ipv6
 };
 
-inline bool operator==(const interface_info& lhs, const interface_info& rhs) {
-  return lhs.hw_addr == rhs.hw_addr
-         && lhs.name == rhs.name
-         && lhs.ipv4_addr == rhs.ipv4_addr
-         && lhs.ipv6_addrs == rhs.ipv6_addrs;
-}
+// {interface_name => {protocol => address}}
+using interfaces_map = std::map<std::string,
+                                std::map<protocol,
+                                         std::vector<std::string>>>;
 
 // send on connect from ActorProbe to ActorNexus
 struct node_info {
-  node_id                     source_node;
-  std::vector<cpu_info>       cpu;
-  std::string                 hostname;
-  std::string                 os;
-  std::vector<interface_info> interfaces;
+  node_id               source_node;
+  std::vector<cpu_info> cpu;
+  std::string           hostname;
+  std::string           os;
+  interfaces_map        interfaces;
 };
 
 inline bool operator==(const node_info& lhs, const node_info& rhs) {
@@ -140,6 +139,16 @@ inline bool operator==(const new_message& lhs, const new_message& rhs) {
 }
 
 /**
+ * Convenience structure to store data collected from probes.
+ */
+struct probe_data {
+  probe_event::node_info node;
+  optional<probe_event::ram_usage> ram;
+  optional<probe_event::work_load> load;
+  std::set<node_id> direct_routes;
+};
+
+/**
  * An event sink consuming messages from the probes.
  */
 using sink = typed_actor<reacts_to<node_info>,
@@ -178,12 +187,8 @@ using nexus_type = sink::extend<
  * Announces all types used either probes or nexi to the type system.
  */
 inline void announce_types() {
+  announce<protocol>();
   announce<cpu_info>(&cpu_info::num_cores, &cpu_info::mhz_per_core);
-  announce<interface_info>(&interface_info::source_node,
-                           &interface_info::name,
-                           &interface_info::hw_addr,
-                           &interface_info::ipv4_addr,
-                           &interface_info::ipv6_addrs);
   announce<node_info>(&node_info::source_node, &node_info::cpu,
                       &node_info::hostname,
                       &node_info::os, &node_info::interfaces);
@@ -202,3 +207,4 @@ inline void announce_types() {
 } // namespace probe_event
 } // namespace caf
 
+#endif // CAF_PROBE_EVENT_HPP
