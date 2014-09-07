@@ -9,7 +9,8 @@
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
- * (at your option) under the terms and conditions of the Boost Software      * * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENCE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
  * http://opensource.org/licenses/BSD-3-Clause and                            *
@@ -18,11 +19,11 @@
 
 #include "caf/probe/init.hpp"
 
+#include <unistd.h>
+
 #include <cstring>
 #include <fstream>
 #include <iostream>
-
-#include <unistd.h>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
@@ -160,13 +161,20 @@ void from_args(probe_config& conf, int argc, char** argv) {
   }
 }
 
-} // namespace <anonymous>
+// SUSv2 guarantees that "host names are limited to 255 bytes"
+static constexpr size_t max_hostname_size = 256;
 
 std::string hostname() {
-  char hostname[30];
-  gethostname(hostname, sizeof(hostname));
-  return std::string(hostname);
+  char buffer[max_hostname_size];
+  gethostname(buffer, max_hostname_size);
+  // make sure string is null terminated, because the POSIX standard does not
+  // guarantee whether the returned buffer includes a terminating null byte in
+  // case of a truncation
+  buffer[max_hostname_size - 1] = '\0';
+  return buffer;
 }
+
+} // namespace <anonymous>
 
 bool init(int argc, char** argv) {
   probe_event::announce_types();
@@ -180,33 +188,20 @@ bool init(int argc, char** argv) {
   io::middleman::instance()->add_hook<fwd_hook>(uplink);
   probe_event::node_info ni;
   ni.source_node = detail::singletons::get_node_id();
-  interfaces iflist = get_interfaces();
-  for (auto interface : iflist) {
-    probe_event::interface_info ii;
-    ii.name = interface.first;
-    auto prop = interface.second;
-    for (auto p : prop) {
-      if (p.first == interface_type::ethernet) {
-        ii.hw_addr = p.second.back();
-      } else if (p.first == interface_type::ipv4) {
-        ii.ipv4_addr = p.second.back();
-      } else if (p.first == interface_type::ipv6) {
-        ii.ipv6_addrs = p.second;
-      }
-    }
-    ni.interfaces.push_back(ii);
-  }
+  ni.interfaces = interfaces();
   ni.hostname = hostname();
   anon_send(uplink, ni);
+  /*
+  // TODO: collect RAM and CPU usage + send to uplink
   spawn<hidden>([uplink](event_based_actor* self) -> behavior {
     self->send(self, atom("poll"));
     return {
       on(atom("poll")) >> [self] {
         self->delayed_send(self, std::chrono::seconds(1), atom("poll"));
-        // TODO: collect RAM and CPU usage + send to uplink
       }
     };
   });
+  */
   return true;
 }
 
