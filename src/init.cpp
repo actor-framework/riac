@@ -89,7 +89,7 @@ class fwd_hook : public io::hook {
   }
 
   void actor_published_cb(const actor_addr& addr, uint16_t port) override {
-    // do nothing (yet)
+    transmit<probe_event::actor_published>(m_node, addr, port);
     call_next<actor_published>(addr, port);
   }
 
