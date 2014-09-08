@@ -138,6 +138,18 @@ inline bool operator==(const new_message& lhs, const new_message& rhs) {
          && lhs.msg == rhs.msg;
 }
 
+struct actor_published {
+  node_id    source_node;
+  actor_addr published_actor;
+  uint16_t   port;
+};
+
+inline bool operator==(const actor_published& lhs, const actor_published& rhs) {
+  return lhs.source_node == rhs.source_node
+         && lhs.published_actor == rhs.published_actor
+         && lhs.port == rhs.port;
+}
+
 /**
  * Convenience structure to store data collected from probes.
  */
@@ -146,17 +158,33 @@ struct probe_data {
   optional<probe_event::ram_usage> ram;
   optional<probe_event::work_load> load;
   std::set<node_id> direct_routes;
+  std::set<std::pair<actor_addr, uint16_t>> published_actors;
+  std::set<actor_addr> known_actors;
 };
+
+inline bool operator==(const probe_data& lhs, const probe_data& rhs) {
+  return lhs.node == rhs.node
+         && lhs.ram == rhs.ram
+         && lhs.load == rhs.load
+         && lhs.direct_routes == rhs.direct_routes;
+}
+
+using probe_data_map = std::map<node_id, probe_event::probe_data>;
 
 /**
  * An event sink consuming messages from the probes.
  */
-using sink = typed_actor<reacts_to<node_info>,
-                         reacts_to<ram_usage>,
-                         reacts_to<work_load>,
-                         reacts_to<new_route>,
-                         reacts_to<route_lost>,
-                         reacts_to<new_message>>;
+using sink_type = typed_actor<reacts_to<node_info>,
+                              reacts_to<ram_usage>,
+                              reacts_to<work_load>,
+                              reacts_to<new_route>,
+                              reacts_to<route_lost>,
+                              reacts_to<new_message>,
+                              reacts_to<actor_published>>;
+
+using listener_type = sink_type::extend<
+                        reacts_to<probe_data_map>
+                      >::type;
 
 struct add_listener {
   actor listener;
@@ -167,7 +195,7 @@ inline bool operator==(const add_listener& lhs, const add_listener& rhs) {
 }
 
 struct add_typed_listener {
-  sink listener;
+  listener_type listener;
 };
 
 inline bool operator==(const add_typed_listener& lhs,
@@ -178,7 +206,7 @@ inline bool operator==(const add_typed_listener& lhs,
 /**
  * The expected type of the nexus.
  */
-using nexus_type = sink::extend<
+using nexus_type = sink_type::extend<
                      reacts_to<add_listener>,
                      reacts_to<add_typed_listener>
                    >::type;
@@ -202,6 +230,22 @@ inline void announce_types() {
                         &new_message::msg);
   announce<add_listener>(&add_listener::listener);
   announce<add_typed_listener>(&add_typed_listener::listener);
+  announce<optional<ram_usage>>();
+  announce<optional<work_load>>();
+  announce<std::set<node_id>>();
+  announce<std::pair<actor_addr, uint16_t>>();
+  announce<std::set<std::pair<actor_addr, uint16_t>>>();
+  announce<std::set<actor_addr>>();
+  announce<actor_published>(&actor_published::source_node,
+                            &actor_published::published_actor,
+                            &actor_published::port);
+  announce<probe_data>(&probe_data::node,
+                       &probe_data::ram,
+                       &probe_data::load,
+                       &probe_data::direct_routes,
+                       &probe_data::published_actors,
+                       &probe_data::known_actors);
+  announce<probe_data_map>();
 }
 
 } // namespace probe_event
