@@ -31,6 +31,7 @@
 #include "caf/probe_event/all.hpp"
 
 #include "caf/detail/singletons.hpp"
+#include "cppa/opt.hpp"
 
 namespace caf {
 namespace probe {
@@ -122,45 +123,6 @@ class fwd_hook : public io::hook {
   node_id m_node;
 };
 
-struct probe_config {
-  uint16_t port;
-  std::string host;
-  std::string config_file_path;
-  inline probe_config() : port(0) { }
-  inline bool valid() const {
-    return !host.empty() && port != 0;
-  }
-};
-
-//const char conf_file_arg[] = "--caf_probe_config_file=";
-const char host_arg[] = "--caf-probe-host=";
-const char port_arg[] = "--caf-probe-port=";
-
-template<size_t Size>
-bool is_substr(const char (&needle)[Size], const char* haystack) {
-  // compare without null terminator
-  if (strncmp(needle, haystack, Size - 1) == 0) {
-    return true;
-  }
-  return false;
-}
-
-template<size_t Size>
-size_t cstr_len(const char (&)[Size]) {
-  return Size - 1;
-}
-
-void from_args(probe_config& conf, int argc, char** argv) {
-  for (auto i = argv; i != argv + argc; ++i) {
-    if (is_substr(host_arg, *i)) {
-      conf.host.assign(*i + cstr_len(host_arg));
-    } else if (is_substr(port_arg, *i)) {
-      int p = std::stoi(*i + cstr_len(port_arg));
-      conf.port = static_cast<uint16_t>(p);
-    }
-  }
-}
-
 // SUSv2 guarantees that "host names are limited to 255 bytes"
 static constexpr size_t max_hostname_size = 256;
 
@@ -178,13 +140,19 @@ std::string hostname() {
 
 bool init(int argc, char** argv) {
   probe_event::announce_types();
-  probe_config conf;
-  from_args(conf, argc, argv);
-  if (!conf.valid()) {
+  std::string host;
+  uint16_t port = 0;
+  options_description desc;
+  bool args_valid = match_stream<std::string>(argv + 1, argv + argc) (
+    on_opt1('H', "--caf-probe-host", &desc, "set probe host") >> rd_arg(host),
+    on_opt1('p', "--caf-probe-port", &desc, "set probe port") >> rd_arg(port),
+    on_opt0('h', "--help", &desc, "print help") >> []() { return false; }
+  );
+  if (!args_valid || port == 0 || host.empty()) {
+    print_desc(&desc, std::cerr)();
     return false;
   }
-  auto uplink = io::typed_remote_actor<probe_event::nexus_type>(conf.host,
-                                                                conf.port);
+  auto uplink = io::typed_remote_actor<probe_event::nexus_type>(host, port);
   io::middleman::instance()->add_hook<fwd_hook>(uplink);
   probe_event::node_info ni;
   ni.source_node = detail::singletons::get_node_id();
