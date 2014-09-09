@@ -20,8 +20,13 @@
 #ifndef CAF_PROBE_INIT_HPP
 #define CAF_PROBE_INIT_HPP
 
+#include <string>
+#include <cstdint>
+
 namespace caf {
 namespace probe {
+
+bool init(const std::string& host, uint16_t port);
 
 bool init(int argc, char** argv);
 

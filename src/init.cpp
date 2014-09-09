@@ -138,20 +138,8 @@ std::string hostname() {
 
 } // namespace <anonymous>
 
-bool init(int argc, char** argv) {
+bool init(const std::string& host, uint16_t port) {
   probe_event::announce_types();
-  std::string host;
-  uint16_t port = 0;
-  options_description desc;
-  bool args_valid = match_stream<std::string>(argv + 1, argv + argc) (
-    on_opt1('H', "--caf-nexus-host", &desc, "set nexus host") >> rd_arg(host),
-    on_opt1('p', "--caf-nexus-port", &desc, "set nexus port") >> rd_arg(port),
-    on_opt0('h', "--help", &desc, "print help") >> []() { return false; }
-  );
-  if (!args_valid || port == 0 || host.empty()) {
-    print_desc(&desc, std::cerr)();
-    return false;
-  }
   auto uplink = io::typed_remote_actor<probe_event::nexus_type>(host, port);
   io::middleman::instance()->add_hook<fwd_hook>(uplink);
   probe_event::node_info ni;
@@ -171,6 +159,22 @@ bool init(int argc, char** argv) {
   });
   */
   return true;
+}
+
+bool init(int argc, char** argv) {
+  std::string host;
+  uint16_t port = 0;
+  options_description desc;
+  bool args_valid = match_stream<std::string>(argv + 1, argv + argc) (
+    on_opt1('H', "caf-nexus-host", &desc, "set nexus host") >> rd_arg(host),
+    on_opt1('p', "caf-nexus-port", &desc, "set nexus port") >> rd_arg(port),
+    on_opt0('h', "help", &desc, "print help") >> []() { return false; }
+  );
+  if (!args_valid || port == 0 || host.empty()) {
+    print_desc(&desc, std::cerr)();
+    return false;
+  }
+  return init(host, port);
 }
 
 } // namespace probe
