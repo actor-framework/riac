@@ -144,8 +144,8 @@ bool init(int argc, char** argv) {
   uint16_t port = 0;
   options_description desc;
   bool args_valid = match_stream<std::string>(argv + 1, argv + argc) (
-    on_opt1('H', "--caf-probe-host", &desc, "set probe host") >> rd_arg(host),
-    on_opt1('p', "--caf-probe-port", &desc, "set probe port") >> rd_arg(port),
+    on_opt1('H', "--caf-nexus-host", &desc, "set nexus host") >> rd_arg(host),
+    on_opt1('p', "--caf-nexus-port", &desc, "set nexus port") >> rd_arg(port),
     on_opt0('h', "--help", &desc, "print help") >> []() { return false; }
   );
   if (!args_valid || port == 0 || host.empty()) {
