@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PROBE_EVENT_HPP
-#define CAF_PROBE_EVENT_HPP
+#ifndef CAF_RIAC_MESSAGE_TYPES_HPP
+#define CAF_RIAC_MESSAGE_TYPES_HPP
 
 #include <string>
 #include <vector>
@@ -31,7 +31,7 @@
 #include "caf/typed_actor.hpp"
 
 namespace caf {
-namespace probe_event {
+namespace riac {
 
 struct cpu_info {
   node_id   source_node;
@@ -138,13 +138,14 @@ inline bool operator==(const new_message& lhs, const new_message& rhs) {
          && lhs.msg == rhs.msg;
 }
 
-struct actor_published {
+struct new_actor_published {
   node_id    source_node;
   actor_addr published_actor;
   uint16_t   port;
 };
 
-inline bool operator==(const actor_published& lhs, const actor_published& rhs) {
+inline bool operator==(const new_actor_published& lhs,
+                       const new_actor_published& rhs) {
   return lhs.source_node == rhs.source_node
          && lhs.published_actor == rhs.published_actor
          && lhs.port == rhs.port;
@@ -154,9 +155,9 @@ inline bool operator==(const actor_published& lhs, const actor_published& rhs) {
  * Convenience structure to store data collected from probes.
  */
 struct probe_data {
-  probe_event::node_info node;
-  optional<probe_event::ram_usage> ram;
-  optional<probe_event::work_load> load;
+  node_info node;
+  optional<ram_usage> ram;
+  optional<work_load> load;
   std::set<node_id> direct_routes;
   std::set<std::pair<actor_addr, uint16_t>> published_actors;
   std::set<actor_addr> known_actors;
@@ -169,7 +170,7 @@ inline bool operator==(const probe_data& lhs, const probe_data& rhs) {
          && lhs.direct_routes == rhs.direct_routes;
 }
 
-using probe_data_map = std::map<node_id, probe_event::probe_data>;
+using probe_data_map = std::map<node_id, probe_data>;
 
 /**
  * An event sink consuming messages from the probes.
@@ -180,7 +181,7 @@ using sink_type = typed_actor<reacts_to<node_info>,
                               reacts_to<new_route>,
                               reacts_to<route_lost>,
                               reacts_to<new_message>,
-                              reacts_to<actor_published>>;
+                              reacts_to<new_actor_published>>;
 
 using listener_type = sink_type::extend<
                         reacts_to<probe_data_map>
@@ -211,44 +212,7 @@ using nexus_type = sink_type::extend<
                      reacts_to<add_typed_listener>
                    >::type;
 
-/**
- * Announces all types used either probes or nexi to the type system.
- */
-inline void announce_types() {
-  announce<protocol>();
-  announce<cpu_info>(&cpu_info::num_cores, &cpu_info::mhz_per_core);
-  announce<node_info>(&node_info::source_node, &node_info::cpu,
-                      &node_info::hostname,
-                      &node_info::os, &node_info::interfaces);
-  announce<ram_usage>(&ram_usage::available, &ram_usage::in_use);
-  announce<work_load>(&work_load::cpu_load, &work_load::num_actors,
-                      &work_load::num_processes);
-  announce<new_route>(&new_route::dest, &new_route::is_direct);
-  announce<route_lost>(&route_lost::dest);
-  announce<new_message>(&new_message::source_node, &new_message::dest_node,
-                        &new_message::source_actor, &new_message::dest_actor,
-                        &new_message::msg);
-  announce<add_listener>(&add_listener::listener);
-  announce<add_typed_listener>(&add_typed_listener::listener);
-  announce<optional<ram_usage>>();
-  announce<optional<work_load>>();
-  announce<std::set<node_id>>();
-  announce<std::pair<actor_addr, uint16_t>>();
-  announce<std::set<std::pair<actor_addr, uint16_t>>>();
-  announce<std::set<actor_addr>>();
-  announce<actor_published>(&actor_published::source_node,
-                            &actor_published::published_actor,
-                            &actor_published::port);
-  announce<probe_data>(&probe_data::node,
-                       &probe_data::ram,
-                       &probe_data::load,
-                       &probe_data::direct_routes,
-                       &probe_data::published_actors,
-                       &probe_data::known_actors);
-  announce<probe_data_map>();
-}
-
-} // namespace probe_event
+} // namespace riac
 } // namespace caf
 
-#endif // CAF_PROBE_EVENT_HPP
+#endif // CAF_RIAC_MESSAGE_TYPES_HPP

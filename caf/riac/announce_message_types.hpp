@@ -17,21 +17,19 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PROBE_INTERFACES_HPP
-#define CAF_PROBE_INTERFACES_HPP
-
-#include <map>
-#include <string>
-#include <vector>
-
-#include "caf/probe_event/probe_event.hpp"
+#ifndef CAF_RIAC_ANNOUNCE_MESSAGE_TYPES_HPP
+#define CAF_RIAC_ANNOUNCE_MESSAGE_TYPES_HPP
 
 namespace caf {
-namespace probe {
+namespace riac {
 
-probe_event::interfaces_map interfaces();
+/**
+ * Announces all types used either probes or nexi to the type system.
+ */
+void announce_message_types();
 
-} // namespace probe
+} // namespace riac
 } // namespace caf
 
-#endif // CAF_PROBE_INTERFACES_HPP
+#endif // CAF_RIAC_ANNOUNCE_MESSAGE_TYPES_HPP
+

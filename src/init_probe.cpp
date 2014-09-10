@@ -17,7 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/probe/init.hpp"
+#include "caf/riac/init_probe.hpp"
 
 #include <unistd.h>
 
@@ -27,20 +27,19 @@
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
-#include "caf/probe/interfaces.hpp"
-#include "caf/probe_event/all.hpp"
+#include "caf/riac/all.hpp"
 
 #include "caf/detail/singletons.hpp"
 #include "cppa/opt.hpp"
 
 namespace caf {
-namespace probe {
+namespace riac {
 
 namespace {
 
 class fwd_hook : public io::hook {
  public:
-  fwd_hook(probe_event::nexus_type uplink)
+  fwd_hook(nexus_type uplink)
       : m_self(true),
         m_uplink(uplink),
         m_node(detail::singletons::get_node_id()) {
@@ -53,7 +52,7 @@ class fwd_hook : public io::hook {
   void message_received_cb(const node_id& src, const actor_addr& from,
                            const actor_addr& dest, message_id mid,
                            const message& msg) override {
-    transmit<probe_event::new_message>(from.node(), dest.node(), from.id(),
+    transmit<new_message>(from.node(), dest.node(), from.id(),
                                        dest.id(), msg);
     call_next<message_received>(src, from, dest, mid, msg);
   }
@@ -65,7 +64,7 @@ class fwd_hook : public io::hook {
       // let's avoid endless recursion, shall we?
       return;
     }
-    transmit<probe_event::new_message>(from.node(), dest.node(), from.id(),
+    transmit<new_message>(from.node(), dest.node(), from.id(),
                                        dest.id(), msg);
     call_next<message_sent>(from, hop, dest, mid, msg);
   }
@@ -90,7 +89,7 @@ class fwd_hook : public io::hook {
   }
 
   void actor_published_cb(const actor_addr& addr, uint16_t port) override {
-    transmit<probe_event::actor_published>(m_node, addr, port);
+    transmit<new_actor_published>(m_node, addr, port);
     call_next<actor_published>(addr, port);
   }
 
@@ -100,12 +99,12 @@ class fwd_hook : public io::hook {
   }
 
   void new_connection_established_cb(const node_id& dest) override {
-    transmit<probe_event::new_route>(m_node, dest, true);
+    transmit<new_route>(m_node, dest, true);
     call_next<new_connection_established>(dest);
   }
 
   void new_route_added_cb(const node_id& via, const node_id& dest) override {
-    transmit<probe_event::new_route>(m_node, dest, false);
+    transmit<new_route>(m_node, dest, false);
     call_next<new_route_added>(via, dest);
   }
 
@@ -119,7 +118,7 @@ class fwd_hook : public io::hook {
 
  private:
   scoped_actor m_self;
-  probe_event::nexus_type m_uplink;
+  nexus_type m_uplink;
   node_id m_node;
 };
 
@@ -138,11 +137,11 @@ std::string hostname() {
 
 } // namespace <anonymous>
 
-bool init(const std::string& host, uint16_t port) {
-  probe_event::announce_types();
-  auto uplink = io::typed_remote_actor<probe_event::nexus_type>(host, port);
+bool init_probe(const std::string& host, uint16_t port) {
+  announce_message_types();
+  auto uplink = io::typed_remote_actor<nexus_type>(host, port);
   io::middleman::instance()->add_hook<fwd_hook>(uplink);
-  probe_event::node_info ni;
+  node_info ni;
   ni.source_node = detail::singletons::get_node_id();
   ni.interfaces = interfaces();
   ni.hostname = hostname();
@@ -161,7 +160,7 @@ bool init(const std::string& host, uint16_t port) {
   return true;
 }
 
-bool init(int argc, char** argv) {
+bool init_probe(int argc, char** argv) {
   std::string host;
   uint16_t port = 0;
   options_description desc;
@@ -174,8 +173,8 @@ bool init(int argc, char** argv) {
     print_desc(&desc, std::cerr)();
     return false;
   }
-  return init(host, port);
+  return init_probe(host, port);
 }
 
-} // namespace probe
+} // namespace riac
 } // namespace caf

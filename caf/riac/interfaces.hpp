@@ -17,21 +17,21 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PROBE_INIT_HPP
-#define CAF_PROBE_INIT_HPP
+#ifndef CAF_RIAC_INTERFACES_HPP
+#define CAF_RIAC_INTERFACES_HPP
 
+#include <map>
 #include <string>
-#include <cstdint>
+#include <vector>
+
+#include "caf/riac/message_types.hpp"
 
 namespace caf {
-namespace probe {
+namespace riac {
 
-bool init(const std::string& host, uint16_t port);
+interfaces_map interfaces();
 
-bool init(int argc, char** argv);
-
-} // namespace probe
+} // namespace riac
 } // namespace caf
 
-#endif // CAF_PROBE_INIT_HPP
-
+#endif // CAF_RIAC_INTERFACES_HPP

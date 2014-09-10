@@ -17,9 +17,21 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PROBE_EVENT_ALL_HPP
-#define CAF_PROBE_EVENT_ALL_HPP
+#ifndef CAF_RIAC_INIT_PROBE_HPP
+#define CAF_RIAC_INIT_PROBE_HPP
 
-#include "caf/probe_event/probe_event.hpp"
+#include <string>
+#include <cstdint>
 
-#endif // CAF_PROBE_EVENT_ALL_HPP
+namespace caf {
+namespace riac {
+
+bool init_probe(const std::string& host, uint16_t port);
+
+bool init_probe(int argc, char** argv);
+
+} // namespace riac
+} // namespace caf
+
+#endif // CAF_RIAC_INIT_PROBE_HPP
+

@@ -17,7 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/probe/interfaces.hpp"
+#include "caf/riac/interfaces.hpp"
 
 #include <memory>
 #include <errno.h>
@@ -37,7 +37,7 @@
 using namespace std;
 
 namespace caf {
-namespace probe {
+namespace riac {
 
 in6_addr* fetch_in_addr(sockaddr_in6* addr) {
   return &(addr->sin6_addr);
@@ -56,9 +56,8 @@ void add_addr(ifaddrs* first, std::vector<std::string>& res) {
   res.push_back(address_buffer);
 }
 
-probe_event::interfaces_map interfaces() {
-  using probe_event::protocol;
-  probe_event::interfaces_map res;
+interfaces_map interfaces() {
+  interfaces_map res;
   // fetch Ethernet addresses
   auto mac_addresses = detail::get_mac_addresses();
   for (auto& i : mac_addresses) {
@@ -87,5 +86,5 @@ probe_event::interfaces_map interfaces() {
   return res;
 }
 
-} // namespace probe
+} // namespace riac
 } // namespace caf
