@@ -139,7 +139,12 @@ std::string hostname() {
 
 bool init_probe(const std::string& host, uint16_t port) {
   announce_message_types();
-  auto uplink = io::typed_remote_actor<nexus_type>(host, port);
+  nexus_type uplink;
+  try {
+    uplink = io::typed_remote_actor<nexus_type>(host, port);
+  } catch (...) {
+    return false;
+  }
   io::middleman::instance()->add_hook<fwd_hook>(uplink);
   node_info ni;
   ni.source_node = detail::singletons::get_node_id();

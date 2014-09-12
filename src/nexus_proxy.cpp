@@ -48,6 +48,13 @@ behavior nexus_proxy::make_behavior() {
       }
       return result;
     },
+    on(atom("HasNode"), arg_match) >> [=](const node_id& nid) -> message {
+      auto i = m_data.find(nid);
+      if (i == m_data.end()) {
+        return make_message(atom("Yes"));
+      }
+      return make_message(atom("No"));
+    },
     on(atom("NodeInfo"), arg_match) >> [=](const node_id& nid) -> message {
       auto i = m_data.find(nid);
       if (i == m_data.end()) {
