@@ -61,6 +61,8 @@ void announce_message_types() {
                        &probe_data::published_actors,
                        &probe_data::known_actors);
   announce<probe_data_map>();
+  announce<sink_type>();
+  announce<nexus_type>();
 }
 
 } // namespace riac
