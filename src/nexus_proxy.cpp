@@ -40,6 +40,15 @@ behavior nexus_proxy::make_behavior() {
     [=](riac::ram_usage& ru) {
       m_data[ru.source_node].ram = std::move(ru);
     },
+    [=](const riac::new_actor_published& msg) {
+      auto addr = msg.published_actor;
+      auto nid = msg.source_node;
+      if (addr == invalid_actor_addr) {
+        return;
+      }
+      m_data[nid].known_actors.insert(addr);
+      m_data[nid].published_actors.insert(std::make_pair(addr, msg.port));
+    },
     on(atom("Nodes")) >> [=]() -> std::vector<node_id> {
       std::vector<node_id> result;
       result.reserve(m_data.size());
