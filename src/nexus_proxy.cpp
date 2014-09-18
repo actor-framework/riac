@@ -22,6 +22,24 @@
 namespace caf {
 namespace riac {
 
+std::vector<node_id> nexus_proxy::to_node_ids(const std::string& hostname) {
+  std::vector<node_id> accu;
+  for (auto kvp : m_data) {
+    if (kvp.second.node.hostname == hostname) {
+      accu.push_back(kvp.first);
+    }
+  }
+  return accu;
+}
+
+optional<std::string> nexus_proxy::to_hostname(const node_id& id) {
+  for (auto kvp : m_data) {
+    if (kvp.first == id)
+      return kvp.second.node.hostname;
+  }
+  return none;
+}
+
 behavior nexus_proxy::make_behavior() {
   return {
     // nexus communication
@@ -63,6 +81,14 @@ behavior nexus_proxy::make_behavior() {
         return make_message(atom("Yes"));
       }
       return make_message(atom("No"));
+    },
+    on(atom("HasHost"), arg_match) >> [=](const std::string& hostname) {
+      auto nodeids = to_node_ids(hostname);
+      if (nodeids.empty()) {
+        return make_message(atom("No"));
+      } else {
+        return make_message(atom("Yes"), nodeids);
+      }
     },
     on(atom("NodeInfo"), arg_match) >> [=](const node_id& nid) -> message {
       auto i = m_data.find(nid);
