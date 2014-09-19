@@ -32,14 +32,6 @@ std::vector<node_id> nexus_proxy::to_node_ids(const std::string& hostname) {
   return accu;
 }
 
-optional<std::string> nexus_proxy::to_hostname(const node_id& id) {
-  for (auto kvp : m_data) {
-    if (kvp.first == id)
-      return kvp.second.node.hostname;
-  }
-  return none;
-}
-
 behavior nexus_proxy::make_behavior() {
   return {
     // nexus communication
@@ -82,13 +74,8 @@ behavior nexus_proxy::make_behavior() {
       }
       return make_message(atom("No"));
     },
-    on(atom("HasHost"), arg_match) >> [=](const std::string& hostname) {
-      auto nodeids = to_node_ids(hostname);
-      if (nodeids.empty()) {
-        return make_message(atom("No"));
-      } else {
-        return make_message(atom("Yes"), nodeids);
-      }
+    on(atom("OnHost"), arg_match) >> [=](const std::string& hostname) {
+      return make_message(to_node_ids(hostname));
     },
     on(atom("NodeInfo"), arg_match) >> [=](const node_id& nid) -> message {
       auto i = m_data.find(nid);
