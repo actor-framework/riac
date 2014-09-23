@@ -22,7 +22,7 @@
 namespace caf {
 namespace riac {
 
-std::vector<node_id> nexus_proxy::to_node_ids(const std::string& hostname) {
+std::vector<node_id> nexus_proxy::nodes_on_host(const std::string& hostname) {
   std::vector<node_id> accu;
   for (auto kvp : m_data) {
     if (kvp.second.node.hostname == hostname) {
