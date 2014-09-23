@@ -32,7 +32,7 @@ class nexus_proxy : public event_based_actor {
  protected:
   behavior make_behavior() override;
 
-  std::vector<node_id>  to_node_ids(const std::string& hostname);
+  std::vector<node_id> nodes_on_host(const std::string& hostname);
 
  private:
   riac::probe_data_map  m_data;

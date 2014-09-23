@@ -75,7 +75,7 @@ behavior nexus_proxy::make_behavior() {
       return make_message(atom("No"));
     },
     on(atom("OnHost"), arg_match) >> [=](const std::string& hostname) {
-      return make_message(to_node_ids(hostname));
+      return make_message(nodes_on_host(hostname));
     },
     on(atom("NodeInfo"), arg_match) >> [=](const node_id& nid) -> message {
       auto i = m_data.find(nid);
