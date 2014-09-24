@@ -35,6 +35,7 @@ void announce_message_types() {
   announce<node_info>(&node_info::source_node, &node_info::cpu,
                       &node_info::hostname,
                       &node_info::os, &node_info::interfaces);
+  announce<node_disconnected>(&node_disconnected::source_node);
   announce<ram_usage>(&ram_usage::available, &ram_usage::in_use);
   announce<work_load>(&work_load::cpu_load, &work_load::num_actors,
                       &work_load::num_processes);

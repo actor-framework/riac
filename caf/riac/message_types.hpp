@@ -73,6 +73,15 @@ inline bool operator==(const node_info& lhs, const node_info& rhs) {
          && lhs.interfaces == rhs.interfaces;
 }
 
+struct node_disconnected {
+  node_id source_node;
+};
+
+inline bool operator==(const node_disconnected& lhs,
+                       const node_disconnected& rhs) {
+  return lhs.source_node == rhs.source_node;
+}
+
 // send periodically from ActorProbe to ActorNexus
 struct ram_usage {
   node_id  source_node;
@@ -181,7 +190,8 @@ using sink_type = typed_actor<reacts_to<node_info>,
                               reacts_to<new_route>,
                               reacts_to<route_lost>,
                               reacts_to<new_message>,
-                              reacts_to<new_actor_published>>;
+                              reacts_to<new_actor_published>,
+                              reacts_to<node_disconnected>>;
 
 using listener_type = sink_type::extend<
                         reacts_to<probe_data_map>
