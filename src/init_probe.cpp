@@ -37,13 +37,30 @@ namespace riac {
 
 namespace {
 
+// SUSv2 guarantees that "host names are limited to 255 bytes"
+static constexpr size_t max_hostname_size = 256;
+
+std::string hostname() {
+  char buffer[max_hostname_size];
+  gethostname(buffer, max_hostname_size);
+  // make sure string is null terminated, because the POSIX standard does not
+  // guarantee whether the returned buffer includes a terminating null byte in
+  // case of a truncation
+  buffer[max_hostname_size - 1] = '\0';
+  return buffer;
+}
+
 class fwd_hook : public io::hook {
  public:
   fwd_hook(nexus_type uplink)
       : m_self(true),
         m_uplink(uplink),
         m_node(detail::singletons::get_node_id()) {
-    // nop
+    node_info ni;
+    ni.source_node = detail::singletons::get_node_id();
+    ni.interfaces = interfaces();
+    ni.hostname = hostname();
+    m_self->send(m_uplink, ni);
   }
   template<class T, class... Ts>
   void transmit(Ts&&... args) {
@@ -122,19 +139,6 @@ class fwd_hook : public io::hook {
   node_id m_node;
 };
 
-// SUSv2 guarantees that "host names are limited to 255 bytes"
-static constexpr size_t max_hostname_size = 256;
-
-std::string hostname() {
-  char buffer[max_hostname_size];
-  gethostname(buffer, max_hostname_size);
-  // make sure string is null terminated, because the POSIX standard does not
-  // guarantee whether the returned buffer includes a terminating null byte in
-  // case of a truncation
-  buffer[max_hostname_size - 1] = '\0';
-  return buffer;
-}
-
 } // namespace <anonymous>
 
 bool init_probe(const std::string& host, uint16_t port) {
@@ -146,11 +150,6 @@ bool init_probe(const std::string& host, uint16_t port) {
     return false;
   }
   io::middleman::instance()->add_hook<fwd_hook>(uplink);
-  node_info ni;
-  ni.source_node = detail::singletons::get_node_id();
-  ni.interfaces = interfaces();
-  ni.hostname = hostname();
-  anon_send(uplink, ni);
   /*
   // TODO: collect RAM and CPU usage + send to uplink
   spawn<hidden>([uplink](event_based_actor* self) -> behavior {
