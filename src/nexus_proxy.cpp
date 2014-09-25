@@ -130,11 +130,11 @@ behavior nexus_proxy::make_behavior() {
         }
       );
     },
-    [=](const down_msg& dm) {
-      auto i = m_data.find(dm.source.node());
-      if (i != m_data.end()) {
-        i->second.known_actors.erase(dm.source);
-      }
+    [=](const down_msg& ) {
+      // nop
+    },
+    [=](const riac::node_disconnected& nd) {
+      m_data.erase(nd.source_node);
     },
     others() >> [=] {
       aout(this) << "Received from sender: "
