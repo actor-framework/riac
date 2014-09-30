@@ -39,7 +39,8 @@ void announce_message_types() {
   announce<ram_usage>(&ram_usage::available, &ram_usage::in_use);
   announce<work_load>(&work_load::cpu_load, &work_load::num_actors,
                       &work_load::num_processes);
-  announce<new_route>(&new_route::dest, &new_route::is_direct);
+  announce<new_route>(&new_route::source_node, &new_route::dest,
+                      &new_route::is_direct);
   announce<route_lost>(&route_lost::dest);
   announce<new_message>(&new_message::source_node, &new_message::dest_node,
                         &new_message::source_actor, &new_message::dest_actor,
