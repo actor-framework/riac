@@ -76,8 +76,9 @@ behavior nexus_proxy::make_behavior() {
       }
       return make_message(atom("No"));
     },
-    on(atom("OnHost"), arg_match) >> [=](const std::string& hostname) {
-      return make_message(nodes_on_host(hostname));
+    on(atom("OnHost"), arg_match) >> [=](const std::string& hostname)
+                                                       -> std::vector<node_id> {
+      return nodes_on_host(hostname);
     },
     on(atom("Routes"), arg_match) >> [=](const node_id& ni) -> message {
       auto kvp = m_data.find(ni);
