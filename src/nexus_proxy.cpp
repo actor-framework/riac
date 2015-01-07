@@ -40,7 +40,7 @@ behavior nexus_proxy::make_behavior() {
     },
     [=](const riac::new_route& route) {
       if (route.is_direct) {
-        m_data[route.source_node].direct_routes.insert(route.dest).second;
+        m_data[route.source_node].direct_routes.insert(route.dest);
       }
     },
     [=](riac::node_info& ni) {
@@ -80,12 +80,13 @@ behavior nexus_proxy::make_behavior() {
                                                        -> std::vector<node_id> {
       return nodes_on_host(hostname);
     },
-    on(atom("Routes"), arg_match) >> [=](const node_id& ni) -> message {
+    on(atom("Routes"), arg_match) >> [=](const node_id& ni) -> std::set<node_id> {
       auto kvp = m_data.find(ni);
       if(kvp != m_data.end()) {
         probe_data pd = kvp->second;
-        return make_message(pd.direct_routes);
+        return pd.direct_routes;
       }
+      return std::set<node_id>{};
     },
     on(atom("NodeInfo"), arg_match) >> [=](const node_id& nid) -> message {
       auto i = m_data.find(nid);
