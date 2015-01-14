@@ -61,7 +61,7 @@ interfaces_map interfaces() {
   // fetch Ethernet addresses
   auto mac_addresses = detail::get_mac_addresses();
   for (auto& i : mac_addresses) {
-    res[i.interface_name][protocol::ethernet].push_back(i.ethernet_address);
+    res[i.first][protocol::ethernet].push_back(i.second);
   }
   // fetch IPv4 and IPv6 addresses
   ifaddrs* tmp = nullptr;
