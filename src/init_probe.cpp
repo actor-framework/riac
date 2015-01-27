@@ -29,6 +29,8 @@
 #include "caf/io/all.hpp"
 #include "caf/riac/all.hpp"
 
+#include "caf/io/network/interfaces.hpp"
+
 #include "caf/detail/singletons.hpp"
 #include "cppa/opt.hpp"
 
@@ -58,7 +60,7 @@ class fwd_hook : public io::hook {
         m_node(detail::singletons::get_node_id()) {
     node_info ni;
     ni.source_node = detail::singletons::get_node_id();
-    ni.interfaces = interfaces();
+    ni.interfaces = io::network::interfaces::list_all();
     ni.hostname = hostname();
     m_self->send(m_uplink, ni);
   }

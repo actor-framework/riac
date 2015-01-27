@@ -9,8 +9,7 @@ file(GLOB CAF_RIAC_HDRS "caf/riac/*.hpp")
 set (CAF_RIAC_SRCS
      src/announce_message_types.cpp
      src/nexus_proxy.cpp
-     src/init_probe.cpp
-     src/interfaces.cpp)
+     src/init_probe.cpp)
 
 # build shared library if not compiling static only
 if(NOT CAF_BUILD_STATIC_ONLY)

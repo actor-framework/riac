@@ -30,6 +30,8 @@
 #include "caf/optional.hpp"
 #include "caf/typed_actor.hpp"
 
+#include "caf/io/network/interfaces.hpp"
+
 namespace caf {
 namespace riac {
 
@@ -51,18 +53,13 @@ enum class protocol {
   ipv6
 };
 
-// {interface_name => {protocol => address}}
-using interfaces_map = std::map<std::string,
-                                std::map<protocol,
-                                         std::vector<std::string>>>;
-
 // send on connect from ActorProbe to ActorNexus
 struct node_info {
   node_id               source_node;
   std::vector<cpu_info> cpu;
   std::string           hostname;
   std::string           os;
-  interfaces_map        interfaces;
+  io::network::interfaces_map        interfaces;
 };
 
 inline bool operator==(const node_info& lhs, const node_info& rhs) {

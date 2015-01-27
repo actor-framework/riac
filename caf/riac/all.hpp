@@ -21,7 +21,6 @@
 #define CAF_RIAC_ALL_HPP
 
 #include "caf/riac/init_probe.hpp"
-#include "caf/riac/interfaces.hpp"
 #include "caf/riac/message_types.hpp"
 #include "caf/riac/announce_message_types.hpp"
 
