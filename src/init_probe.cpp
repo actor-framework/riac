@@ -32,7 +32,6 @@
 #include "caf/io/network/interfaces.hpp"
 
 #include "caf/detail/singletons.hpp"
-#include "cppa/opt.hpp"
 
 namespace caf {
 namespace riac {
@@ -169,14 +168,15 @@ bool init_probe(const std::string& host, uint16_t port) {
 bool init_probe(int argc, char** argv) {
   std::string host;
   uint16_t port = 0;
-  options_description desc;
-  bool args_valid = match_stream<std::string>(argv + 1, argv + argc) (
-    on_opt1('H', "caf-nexus-host", &desc, "set nexus host") >> rd_arg(host),
-    on_opt1('p', "caf-nexus-port", &desc, "set nexus port") >> rd_arg(port),
-    on_opt0('h', "help", &desc, "print help") >> []() { return false; }
-  );
-  if (!args_valid || port == 0 || host.empty()) {
-    print_desc(&desc, std::cerr)();
+  std::set<std::string> opts;
+  message_builder(argv + 1, argv + argc).filter_cli({
+    {"caf-nexus-host", "IP or hostname of nexus", host},
+    {"caf-nexus-port", "port of published nexus actor", port}
+  });
+  if (port == 0 || host.empty()) {
+    std::cerr << "port or hostname for nexus missing, please use "
+                 "--caf-nexus-host=HOST and --caf-nexus-port=PORT to "
+                 "configure this probe" << std::endl;
     return false;
   }
   return init_probe(host, port);
