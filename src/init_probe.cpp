@@ -168,7 +168,6 @@ bool init_probe(const std::string& host, uint16_t port) {
 bool init_probe(int argc, char** argv) {
   std::string host;
   uint16_t port = 0;
-  std::set<std::string> opts;
   message_builder(argv + 1, argv + argc).filter_cli({
     {"caf-nexus-host", "IP or hostname of nexus", host},
     {"caf-nexus-port", "port of published nexus actor", port}
