@@ -149,9 +149,9 @@ behavior nexus_proxy::make_behavior() {
     },
     others() >> [=] {
       aout(this) << "Received from sender: "
-                 << to_string(last_sender())
+                 << to_string(current_sender())
                  << std::endl << "an unexpected message. "
-                 << to_string(last_dequeued())
+                 << to_string(current_message())
                  << std::endl << std::endl;
     }
   };
