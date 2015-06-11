@@ -52,20 +52,20 @@ std::string hostname() {
 }
 
 class fwd_hook : public io::hook {
- public:
+public:
   fwd_hook(nexus_type uplink)
-      : m_self(true),
-        m_uplink(uplink),
-        m_node(detail::singletons::get_node_id()) {
+      : self_(true),
+        uplink_(uplink),
+        node_(detail::singletons::get_node_id()) {
     node_info ni;
     ni.source_node = detail::singletons::get_node_id();
     ni.interfaces = io::network::interfaces::list_all();
     ni.hostname = hostname();
-    m_self->send(m_uplink, ni);
+    self_->send(uplink_, ni);
   }
   template<class T, class... Ts>
   void transmit(Ts&&... args) {
-    m_self->send(m_uplink, T{std::forward<Ts>(args)...});
+    self_->send(uplink_, T{std::forward<Ts>(args)...});
   }
   void message_received_cb(const node_id& src, const actor_addr& from,
                            const actor_addr& dest, message_id mid,
@@ -78,7 +78,7 @@ class fwd_hook : public io::hook {
   void message_sent_cb(const actor_addr& from, const node_id& hop,
                        const actor_addr& dest, message_id mid,
                        const message& msg) override {
-    if (dest == m_uplink) {
+    if (dest == uplink_) {
       // let's avoid endless recursion, shall we?
       return;
     }
@@ -107,7 +107,7 @@ class fwd_hook : public io::hook {
   }
 
   void actor_published_cb(const actor_addr& addr, uint16_t port) override {
-    transmit<new_actor_published>(m_node, addr, port);
+    transmit<new_actor_published>(node_, addr, port);
     call_next<actor_published>(addr, port);
   }
 
@@ -117,12 +117,12 @@ class fwd_hook : public io::hook {
   }
 
   void new_connection_established_cb(const node_id& dest) override {
-    transmit<new_route>(m_node, dest, true);
+    transmit<new_route>(node_, dest, true);
     call_next<new_connection_established>(dest);
   }
 
   void new_route_added_cb(const node_id& via, const node_id& dest) override {
-    transmit<new_route>(m_node, dest, false);
+    transmit<new_route>(node_, dest, false);
     call_next<new_route_added>(via, dest);
   }
 
@@ -134,10 +134,10 @@ class fwd_hook : public io::hook {
     call_next<invalid_message_received>(source, sender, invalid_dest, mid, msg);
   }
 
- private:
-  scoped_actor m_self;
-  nexus_type m_uplink;
-  node_id m_node;
+private:
+  scoped_actor self_;
+  nexus_type uplink_;
+  node_id node_;
 };
 
 } // namespace <anonymous>

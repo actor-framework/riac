@@ -23,9 +23,7 @@
 namespace caf {
 namespace riac {
 
-/**
- * Announces all types used either probes or nexi to the type system.
- */
+/// Announces all types used either probes or nexi to the type system.
 void announce_message_types();
 
 } // namespace riac

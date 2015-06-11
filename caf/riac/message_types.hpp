@@ -47,12 +47,6 @@ inline bool operator==(const cpu_info& lhs, const cpu_info& rhs) {
          && lhs.mhz_per_core == rhs.mhz_per_core;
 }
 
-enum class protocol {
-  ethernet,
-  ipv4,
-  ipv6
-};
-
 // send on connect from ActorProbe to ActorNexus
 struct node_info {
   node_id               source_node;
@@ -157,9 +151,7 @@ inline bool operator==(const new_actor_published& lhs,
          && lhs.port == rhs.port;
 }
 
-/**
- * Convenience structure to store data collected from probes.
- */
+/// Convenience structure to store data collected from probes.
 struct probe_data {
   node_info node;
   optional<ram_usage> ram;
@@ -178,9 +170,7 @@ inline bool operator==(const probe_data& lhs, const probe_data& rhs) {
 
 using probe_data_map = std::map<node_id, probe_data>;
 
-/**
- * An event sink consuming messages from the probes.
- */
+/// An event sink consuming messages from the probes.
 using sink_type = typed_actor<reacts_to<node_info>,
                               reacts_to<ram_usage>,
                               reacts_to<work_load>,
@@ -211,9 +201,7 @@ inline bool operator==(const add_typed_listener& lhs,
   return lhs.listener == rhs.listener;
 }
 
-/**
- * The expected type of the nexus.
- */
+/// The expected type of the nexus.
 using nexus_type = sink_type::extend<
                      reacts_to<add_listener>,
                      reacts_to<add_typed_listener>

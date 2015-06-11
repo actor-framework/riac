@@ -24,13 +24,15 @@
 
 #include "caf/optional.hpp"
 #include "caf/announce.hpp"
+
+#include "caf/io/network/protocol.hpp"
+
 #include "caf/riac/message_types.hpp"
 
 namespace caf {
 namespace riac {
 
 void announce_message_types() {
-  announce<protocol>("@protocol");
   announce<cpu_info>("@cpu_info", &cpu_info::num_cores,
                      &cpu_info::mhz_per_core);
   announce<node_info>("@node_info", &node_info::source_node, &node_info::cpu,

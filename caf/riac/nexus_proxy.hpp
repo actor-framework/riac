@@ -29,14 +29,14 @@ namespace caf {
 namespace riac {
 
 class nexus_proxy : public event_based_actor {
- protected:
+protected:
   behavior make_behavior() override;
 
   std::vector<node_id> nodes_on_host(const std::string& hostname);
 
- private:
-  riac::probe_data_map  m_data;
-  std::list<node_id> m_visited_nodes;
+private:
+  riac::probe_data_map  data_;
+  std::list<node_id> visited_nodes_;
 };
 
 } // namespace riac

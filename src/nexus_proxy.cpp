@@ -24,7 +24,7 @@ namespace riac {
 
 std::vector<node_id> nexus_proxy::nodes_on_host(const std::string& hostname) {
   std::vector<node_id> accu;
-  for (auto kvp : m_data) {
+  for (auto kvp : data_) {
     if (kvp.second.node.hostname == hostname) {
       accu.push_back(kvp.first);
     }
@@ -40,17 +40,17 @@ behavior nexus_proxy::make_behavior() {
     },
     [=](const riac::new_route& route) {
       if (route.is_direct) {
-        m_data[route.source_node].direct_routes.insert(route.dest);
+        data_[route.source_node].direct_routes.insert(route.dest);
       }
     },
     [=](riac::node_info& ni) {
-      m_data[ni.source_node].node = std::move(ni);
+      data_[ni.source_node].node = std::move(ni);
     },
     [=](riac::work_load& wl) {
-      m_data[wl.source_node].load = std::move(wl);
+      data_[wl.source_node].load = std::move(wl);
     },
     [=](riac::ram_usage& ru) {
-      m_data[ru.source_node].ram = std::move(ru);
+      data_[ru.source_node].ram = std::move(ru);
     },
     [=](const riac::new_actor_published& msg) {
       auto addr = msg.published_actor;
@@ -58,20 +58,20 @@ behavior nexus_proxy::make_behavior() {
       if (addr == invalid_actor_addr) {
         return;
       }
-      m_data[nid].known_actors.insert(addr);
-      m_data[nid].published_actors.insert(std::make_pair(addr, msg.port));
+      data_[nid].known_actors.insert(addr);
+      data_[nid].published_actors.insert(std::make_pair(addr, msg.port));
     },
     on(atom("Nodes")) >> [=]() -> std::vector<node_id> {
       std::vector<node_id> result;
-      result.reserve(m_data.size());
-      for (auto& kvp : m_data) {
+      result.reserve(data_.size());
+      for (auto& kvp : data_) {
         result.push_back(kvp.first);
       }
       return result;
     },
     on(atom("HasNode"), arg_match) >> [=](const node_id& nid) -> message {
-      auto i = m_data.find(nid);
-      if (i != m_data.end()) {
+      auto i = data_.find(nid);
+      if (i != data_.end()) {
         return make_message(atom("Yes"));
       }
       return make_message(atom("No"));
@@ -81,44 +81,44 @@ behavior nexus_proxy::make_behavior() {
       return nodes_on_host(hostname);
     },
     on(atom("Routes"), arg_match) >> [=](const node_id& ni) -> std::set<node_id> {
-      auto kvp = m_data.find(ni);
-      if(kvp != m_data.end()) {
+      auto kvp = data_.find(ni);
+      if(kvp != data_.end()) {
         probe_data pd = kvp->second;
         return pd.direct_routes;
       }
       return std::set<node_id>{};
     },
     on(atom("NodeInfo"), arg_match) >> [=](const node_id& nid) -> message {
-      auto i = m_data.find(nid);
-      if (i == m_data.end()) {
+      auto i = data_.find(nid);
+      if (i == data_.end()) {
         return make_message(atom("NoNodeInfo"));
       }
       return make_message(i->second.node);
     },
     on(atom("WorkLoad"), arg_match) >> [=](const node_id& nid) -> message {
-      auto i = m_data.find(nid);
-      if (i == m_data.end() || !i->second.load) {
+      auto i = data_.find(nid);
+      if (i == data_.end() || ! i->second.load) {
         return make_message(atom("NoWorkLoad"));
       }
       return make_message(*(i->second.load));
     },
     on(atom("RamUsage"), arg_match) >> [=](const node_id& nid) -> message {
-      auto i = m_data.find(nid);
-      if (i == m_data.end() || !i->second.ram) {
+      auto i = data_.find(nid);
+      if (i == data_.end() || ! i->second.ram) {
         return make_message(atom("NoRamUsage"));
       }
       return make_message(*(i->second.ram));
     },
     on(atom("ListActors"), arg_match) >> [=](const node_id& nid) -> std::string {
       std::ostringstream oss;
-      auto& known_actors = m_data[nid].known_actors;
+      auto& known_actors = data_[nid].known_actors;
       for (auto& addr : known_actors) {
         oss << addr.id() << "\n";
       }
       return oss.str();
     },
     on(atom("GetActor"), arg_match) >> [=](const node_id& nid, uint32_t aid) -> actor {
-      auto& known_actors = m_data[nid].known_actors;
+      auto& known_actors = data_[nid].known_actors;
       auto last = known_actors.end();
       auto pred = [aid](const actor_addr& addr) {
         return addr.id() == aid;
@@ -135,7 +135,7 @@ behavior nexus_proxy::make_behavior() {
       become(
         keep_behavior,
         [=](riac::probe_data_map& init_state) {
-          m_data.swap(init_state);
+          data_.swap(init_state);
           hdl.deliver(make_message(atom("InitDone")));
           unbecome();
         }
@@ -145,7 +145,7 @@ behavior nexus_proxy::make_behavior() {
       // nop
     },
     [=](const riac::node_disconnected& nd) {
-      m_data.erase(nd.source_node);
+      data_.erase(nd.source_node);
     },
     others() >> [=] {
       aout(this) << "Received from sender: "
