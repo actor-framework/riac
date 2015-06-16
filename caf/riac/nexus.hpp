@@ -17,13 +17,27 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_RIAC_ALL_HPP
-#define CAF_RIAC_ALL_HPP
+#include <map>
+#include <set>
 
-#include "caf/riac/nexus.hpp"
-#include "caf/riac/init_probe.hpp"
+#include "caf/typed_event_based_actor.hpp"
+
 #include "caf/riac/message_types.hpp"
-#include "caf/riac/announce_message_types.hpp"
 
-#endif // CAF_RIAC_ALL_HPP
+namespace caf {
+namespace riac {
 
+class nexus : public nexus_type::base {
+public:
+  behavior_type make_behavior() override;
+
+private:
+  void broadcast();
+  void add_listener(listener_type hdl);
+  std::map<actor_addr, node_id> probes_;
+  probe_data_map data_;
+  std::set<listener_type> listeners_;
+};
+
+} // namespace riac
+} // namespace caf
