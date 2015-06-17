@@ -69,6 +69,7 @@ void run_nexus(bool launch_probe, uint16_t port) {
       }
     );
   }
+  anon_send_exit(nexus, exit_reason::kill);
 }
 
 CAF_TEST(riac_init) {
@@ -93,5 +94,6 @@ CAF_TEST(riac_init) {
   } else {
     run_nexus(true, 0);
   }
+  await_all_actors_done();
   shutdown();
 }
