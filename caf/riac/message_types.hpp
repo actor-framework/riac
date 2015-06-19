@@ -180,9 +180,7 @@ using sink_type = typed_actor<reacts_to<node_info>,
                               reacts_to<new_actor_published>,
                               reacts_to<node_disconnected>>;
 
-using listener_type = sink_type::extend<
-                        reacts_to<probe_data_map>
-                      >::type;
+using listener_type = sink_type::extend<reacts_to<probe_data_map>>;
 
 struct add_listener {
   actor listener;
@@ -202,10 +200,8 @@ inline bool operator==(const add_typed_listener& lhs,
 }
 
 /// The expected type of the nexus.
-using nexus_type = sink_type::extend<
-                     reacts_to<add_listener>,
-                     reacts_to<add_typed_listener>
-                   >::type;
+using nexus_type = sink_type::extend<reacts_to<add_listener>,
+                                     reacts_to<add_typed_listener>>;
 
 } // namespace riac
 } // namespace caf
