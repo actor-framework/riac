@@ -87,10 +87,16 @@ public:
     call_next<message_sent>(from, hop, dest, mid, msg);
   }
 
-  void message_forwarded_cb(const node_id& from, const node_id& dest,
+  void message_forwarded_cb(const io::basp::header& hdr,
                             const std::vector<char>* payload) override {
     // do nothing (yet)
-    call_next<message_forwarded>(from, dest, payload);
+    call_next<message_forwarded>(hdr, payload);
+  }
+
+  void message_forwarding_failed_cb(const io::basp::header& hdr,
+                                    const std::vector<char>* payload) override {
+    // do nothing (yet)
+    call_next<message_forwarding_failed>(hdr, payload);
   }
 
   void message_sending_failed_cb(const actor_addr& from, const actor_addr& dest,
@@ -100,15 +106,11 @@ public:
     call_next<message_sending_failed>(from, dest, mid, payload);
   }
 
-  void message_forwarding_failed_cb(const node_id& from, const node_id& to,
-                                    const std::vector<char>* payload) override {
-    // do nothing (yet)
-    call_next<message_forwarding_failed>(from, to, payload);
-  }
-
-  void actor_published_cb(const actor_addr& addr, uint16_t port) override {
+  void actor_published_cb(const actor_addr& addr,
+                          const std::set<std::string>& ifs,
+                          uint16_t port) override {
     transmit<new_actor_published>(node_, addr, port);
-    call_next<actor_published>(addr, port);
+    call_next<actor_published>(addr, ifs, port);
   }
 
   void new_remote_actor_cb(const actor_addr& addr) override {
