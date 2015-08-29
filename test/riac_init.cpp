@@ -41,7 +41,7 @@ void run_probe(uint16_t port) {
 
 void run_nexus(bool launch_probe, uint16_t port) {
   scoped_actor self;
-  auto nexus = spawn_typed<riac::nexus>();
+  auto nexus = spawn<riac::nexus>();
   self->send(nexus, riac::add_listener{self});
   port = io::typed_publish(nexus, port);
   CAF_MESSAGE("published nexus at port " << port);
