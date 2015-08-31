@@ -28,7 +28,7 @@
 #include "caf/io/all.hpp"
 #include "caf/riac/all.hpp"
 
-#include "caf/detail/run_program.hpp"
+#include "caf/detail/run_sub_unit_test.hpp"
 
 using namespace caf;
 
@@ -47,8 +47,12 @@ void run_nexus(bool launch_probe, uint16_t port) {
   CAF_MESSAGE("published nexus at port " << port);
   std::thread child;
   if (launch_probe) {
-    child = detail::run_program(self, caf::test::engine::path(), "-n", "-s",
-                                "riac_init", "--", "-p", port);
+    child = detail::run_sub_unit_test(self,
+                                      test::engine::path(),
+                                      test::engine::max_runtime(),
+                                      CAF_XSTR(CAF_SUITE),
+                                      false,
+                                      {"--probe=" + std::to_string(port)});
   }
   self->receive(
     [&](const riac::node_info&) {
