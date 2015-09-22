@@ -80,7 +80,7 @@ CAF_TEST(riac_init) {
   auto argv = test::engine::argv();
   auto argc = test::engine::argc();
   CAF_MESSAGE("this node is: " << to_string(detail::singletons::get_node_id()));
-  uint16_t port;
+  uint16_t port = 0;
   auto r = message_builder(argv, argv + argc).extract_opts({
     {"nexus,n", "run nexus in server mode", port},
     {"probe,p", "run as probe", port}
