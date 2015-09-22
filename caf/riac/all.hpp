@@ -22,8 +22,8 @@
 
 #include "caf/riac/nexus.hpp"
 #include "caf/riac/init_probe.hpp"
+#include "caf/riac/nexus_proxy.hpp"
 #include "caf/riac/message_types.hpp"
 #include "caf/riac/announce_message_types.hpp"
 
 #endif // CAF_RIAC_ALL_HPP
-

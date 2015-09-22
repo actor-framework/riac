@@ -22,138 +22,116 @@
 namespace caf {
 namespace riac {
 
-std::vector<node_id> nexus_proxy::nodes_on_host(const std::string& hostname) {
-  std::vector<node_id> accu;
-  for (auto kvp : data_) {
-    if (kvp.second.node.hostname == hostname) {
-      accu.push_back(kvp.first);
-    }
-  }
-  return accu;
-}
-
-behavior nexus_proxy::make_behavior() {
+nexus_proxy_type::behavior_type
+nexus_proxy(nexus_proxy_type::stateful_pointer<nexus_proxy_state> self) {
   return {
-    // nexus communication
-    [=](const riac::new_message& ) {
+    // from sink_type
+    [=](node_info& ni) {
+      self->state.data[ni.source_node].node = std::move(ni);
+    },
+    [=](ram_usage& ru) {
+      self->state.data[ru.source_node].ram = std::move(ru);
+    },
+    [=](work_load& wl) {
+      self->state.data[wl.source_node].load = std::move(wl);
+    },
+    [=](const new_route& route) {
+      if (route.is_direct)
+        self->state.data[route.source_node].direct_routes.insert(route.dest);
+    },
+    [=](const route_lost& route) {
+      self->state.data[route.source_node].direct_routes.erase(route.dest);
+    },
+    [=](const new_message&) {
       //aout(this) << "new message" << endl;
     },
-    [=](const riac::new_route& route) {
-      if (route.is_direct) {
-        data_[route.source_node].direct_routes.insert(route.dest);
-      }
-    },
-    [=](riac::node_info& ni) {
-      data_[ni.source_node].node = std::move(ni);
-    },
-    [=](riac::work_load& wl) {
-      data_[wl.source_node].load = std::move(wl);
-    },
-    [=](riac::ram_usage& ru) {
-      data_[ru.source_node].ram = std::move(ru);
-    },
-    [=](const riac::new_actor_published& msg) {
+    [=](const new_actor_published& msg) {
       auto addr = msg.published_actor;
       auto nid = msg.source_node;
       if (addr == invalid_actor_addr) {
         return;
       }
-      data_[nid].known_actors.insert(addr);
-      data_[nid].published_actors.insert(std::make_pair(addr, msg.port));
+      self->state.data[nid].known_actors.insert(addr);
+      self->state.data[nid].published_actors.insert(std::make_pair(addr, msg.port));
     },
-    on(atom("Nodes")) >> [=]() -> std::vector<node_id> {
+    [=](const node_disconnected& nd) {
+      self->state.data.erase(nd.source_node);
+    },
+    // from nexus_type
+    [=](const add_listener&) {
+      // TODO
+    },
+    [=](const add_typed_listener&) {
+      // TODO
+    },
+    // from nexus_proxy_type
+    [=](probe_data_map& new_data) {
+      self->state.data = std::move(new_data);
+    },
+    [=](list_nodes) -> std::vector<node_id> {
       std::vector<node_id> result;
-      result.reserve(data_.size());
-      for (auto& kvp : data_) {
+      result.reserve(self->state.data.size());
+      for (auto& kvp : self->state.data)
         result.push_back(kvp.first);
+      return result;
+    },
+    [=](list_nodes, const std::string& hostname) -> std::vector<node_id> {
+      std::vector<node_id> result;
+      for (auto& kvp : self->state.data)
+        if (kvp.second.node.hostname == hostname)
+          result.push_back(kvp.first);
+      return result;
+    },
+    [=](get_node, const node_id& nid) -> either<node_info>::or_else<error_atom> {
+      auto i = self->state.data.find(nid);
+      if (i == self->state.data.end())
+        return {error_atom::value};
+      return {i->second.node};
+    },
+    [=](list_peers, const node_id& ni) -> std::vector<node_id> {
+      std::vector<node_id> result;
+      auto kvp = self->state.data.find(ni);
+      if(kvp != self->state.data.end()) {
+        auto& direct_routes = kvp->second.direct_routes;
+        result.insert(result.end(), direct_routes.begin(), direct_routes.end());
       }
       return result;
     },
-    on(atom("HasNode"), arg_match) >> [=](const node_id& nid) -> message {
-      auto i = data_.find(nid);
-      if (i != data_.end()) {
-        return make_message(atom("Yes"));
+    [=](get_sys_load, const node_id& nid)
+    -> either<work_load>::or_else<error_atom> {
+      auto i = self->state.data.find(nid);
+      if (i == self->state.data.end() || ! i->second.load) {
+        return error_atom::value;
       }
-      return make_message(atom("No"));
+      return *(i->second.load);
     },
-    on(atom("OnHost"), arg_match) >> [=](const std::string& hostname)
-                                                       -> std::vector<node_id> {
-      return nodes_on_host(hostname);
+    [=](get_ram_usage, const node_id& nid)
+    -> either<ram_usage>::or_else<error_atom> {
+      auto i = self->state.data.find(nid);
+      if (i == self->state.data.end() || ! i->second.ram)
+        return error_atom::value;
+      return *(i->second.ram);
     },
-    on(atom("Routes"), arg_match) >> [=](const node_id& ni) -> std::set<node_id> {
-      auto kvp = data_.find(ni);
-      if(kvp != data_.end()) {
-        probe_data pd = kvp->second;
-        return pd.direct_routes;
-      }
-      return std::set<node_id>{};
+    [=](list_actors, const node_id& nid) -> std::vector<actor_addr> {
+      std::vector<actor_addr> result;
+      for (auto& addr : self->state.data[nid].known_actors)
+        result.push_back(addr);
+      return result;
     },
-    on(atom("NodeInfo"), arg_match) >> [=](const node_id& nid) -> message {
-      auto i = data_.find(nid);
-      if (i == data_.end()) {
-        return make_message(atom("NoNodeInfo"));
-      }
-      return make_message(i->second.node);
-    },
-    on(atom("WorkLoad"), arg_match) >> [=](const node_id& nid) -> message {
-      auto i = data_.find(nid);
-      if (i == data_.end() || ! i->second.load) {
-        return make_message(atom("NoWorkLoad"));
-      }
-      return make_message(*(i->second.load));
-    },
-    on(atom("RamUsage"), arg_match) >> [=](const node_id& nid) -> message {
-      auto i = data_.find(nid);
-      if (i == data_.end() || ! i->second.ram) {
-        return make_message(atom("NoRamUsage"));
-      }
-      return make_message(*(i->second.ram));
-    },
-    on(atom("ListActors"), arg_match) >> [=](const node_id& nid) -> std::string {
-      std::ostringstream oss;
-      auto& known_actors = data_[nid].known_actors;
-      for (auto& addr : known_actors) {
-        oss << addr.id() << "\n";
-      }
-      return oss.str();
-    },
-    on(atom("GetActor"), arg_match) >> [=](const node_id& nid, uint32_t aid) -> actor {
-      auto& known_actors = data_[nid].known_actors;
+    [=](get_actor, const node_id& nid, actor_id aid) -> actor_addr {
+      auto& known_actors = self->state.data[nid].known_actors;
       auto last = known_actors.end();
       auto pred = [aid](const actor_addr& addr) {
         return addr.id() == aid;
       };
       auto i = std::find_if(known_actors.begin(), last, pred);
-      if (i != last) {
-        return actor_cast<actor>(*i);
-      }
-      return invalid_actor;
-    },
-    on(atom("Init"), arg_match) >> [=](const riac::nexus_type& nexus) {
-      auto hdl = make_response_promise();
-      send(nexus, riac::add_listener{this});
-      become(
-        keep_behavior,
-        [=](riac::probe_data_map& init_state) {
-          data_.swap(init_state);
-          hdl.deliver(make_message(atom("InitDone")));
-          unbecome();
-        }
-      );
+      if (i != last)
+        return *i;
+      return invalid_actor_addr;
     },
     [=](const down_msg& ) {
       // nop
     },
-    [=](const riac::node_disconnected& nd) {
-      data_.erase(nd.source_node);
-    },
-    others() >> [=] {
-      aout(this) << "Received from sender: "
-                 << to_string(current_sender())
-                 << std::endl << "an unexpected message. "
-                 << to_string(current_message())
-                 << std::endl << std::endl;
-    }
   };
 }
 
