@@ -17,7 +17,8 @@ add_custom_target(libcaf_riac)
 # build shared library if not compiling static only
 if(NOT CAF_BUILD_STATIC_ONLY)
   add_library(libcaf_riac_shared SHARED ${CAF_RIAC_SRCS} ${CAF_RIAC_HDRS})
-  target_link_libraries(libcaf_riac_shared ${LD_FLAGS} ${LIBCAF_LIBRARIES})
+  target_link_libraries(libcaf_riac_shared
+                        ${LD_FLAGS} ${CAF_LIBRARY_CORE} ${CAF_LIBRARY_IO})
   set_target_properties(libcaf_riac_shared
                         PROPERTIES
                         SOVERSION ${CAF_VERSION}
