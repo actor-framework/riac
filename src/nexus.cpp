@@ -41,8 +41,8 @@ using std::endl;
       return;                                                                  \
     }                                                                          \
     cout << "received " << #TypeName << endl;                                  \
-    data_[FieldName.source_node].FieldName = FieldName;                       \
-    broadcast();                                                      \
+    data_[FieldName.source_node].FieldName = FieldName;                        \
+    broadcast();                                                               \
   }
 
 namespace {
@@ -57,11 +57,10 @@ std::string format_down_msg(const std::string& type, const caf::down_msg& dm) {
 
 } // namespace <anonymous>
 
-
 namespace caf {
 namespace riac {
 
-void nexus::add_listener(riac::listener_type hdl) {
+void nexus::add_listener(listener_type hdl) {
   if (listeners_.insert(hdl).second) {
     cout << "new listener: "
          << to_string(actor_cast<actor>(hdl))
@@ -72,15 +71,13 @@ void nexus::add_listener(riac::listener_type hdl) {
 }
 
 void nexus::broadcast() {
-  for (auto& l : listeners_) {
-    // we now for sure that l can handle last_dequeued()
+  for (auto& l : listeners_)
     send(actor_cast<actor>(l), current_message());
-  }
 }
 
 nexus::behavior_type nexus::make_behavior() {
   return {
-    [=](const riac::node_info& ni) {
+    [=](const node_info& ni) {
       if (ni.source_node == caf::invalid_node_id) {
         cerr << "node_info received with invalid source node" << endl;
         return;
@@ -92,14 +89,14 @@ nexus::behavior_type nexus::make_behavior() {
       monitor(ls);
       broadcast();
     },
-    HANDLE_UPDATE(riac::ram_usage, ram),
-    HANDLE_UPDATE(riac::work_load, load),
-    [=](const riac::new_actor_published& msg) {
-      CHECK_SOURCE(riac::actor_published, msg);
+    HANDLE_UPDATE(ram_usage, ram),
+    HANDLE_UPDATE(work_load, load),
+    [=](const new_actor_published& msg) {
+      CHECK_SOURCE(actor_published, msg);
       auto addr = msg.published_actor;
       auto nid = msg.source_node;
       if (addr == invalid_actor_addr) {
-        cerr << "received riac::actor_published "
+        cerr << "received actor_published "
              << "with invalid actor address"
              << endl;
         return;
@@ -110,42 +107,42 @@ nexus::behavior_type nexus::make_behavior() {
       data_[nid].published_actors.insert(std::make_pair(addr, msg.port));
       broadcast();
     },
-    [=](const riac::new_route& route) {
-      CHECK_SOURCE(riac::new_route, route);
+    [=](const new_route& route) {
+      CHECK_SOURCE(new_route, route);
       if (route.is_direct
           && data_[route.source_node].direct_routes.insert(route.dest).second) {
         broadcast();
       }
     },
-    [=](const riac::route_lost& route) {
-      CHECK_SOURCE(riac::route_lost, route);
+    [=](const route_lost& route) {
+      CHECK_SOURCE(route_lost, route);
       if (data_[route.source_node].direct_routes.erase(route.dest) > 0) {
         cout << "new route" << endl;
         broadcast();
       }
     },
-    [=](const riac::new_message& msg) {
+    [=](const new_message& msg) {
       // TODO: reduce message size by avoiding the complete msg
-      CHECK_SOURCE(riac::new_message, msg);
+      CHECK_SOURCE(new_message, msg);
       cout << "new message" << endl;
       broadcast();
     },
-    [=](const riac::add_listener& req) {
+    [=](const add_listener& req) {
       //cout << "new listerner" << endl;
-      add_listener(actor_cast<riac::listener_type>(req.listener));
+      add_listener(actor_cast<listener_type>(req.listener));
     },
-    [=](const riac::add_typed_listener& req) {
+    [=](const add_typed_listener& req) {
       add_listener(req.listener);
     },
     [=](const down_msg& dm) {
-      if (listeners_.erase(actor_cast<riac::listener_type>(dm.source)) > 0) {
+      if (listeners_.erase(actor_cast<listener_type>(dm.source)) > 0) {
         cout << format_down_msg("listener", dm) << endl;
         return;
       }
       auto probe_addr = probes_.find(dm.source);
       if (probe_addr != probes_.end()) {
         cout << format_down_msg("probe", dm) << endl;
-        riac::node_disconnected nd{probe_addr->second};
+        node_disconnected nd{probe_addr->second};
         send(this, nd);
         auto i = data_.find(probe_addr->second);
         if (i != data_.end()
@@ -154,7 +151,7 @@ nexus::behavior_type nexus::make_behavior() {
         }
       }
     },
-    [=](const riac::node_disconnected& nd) {
+    [=](const node_disconnected& nd) {
       data_.erase(nd.source_node);
       broadcast();
     }

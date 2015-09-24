@@ -63,10 +63,12 @@ public:
     ni.hostname = hostname();
     self_->send(uplink_, ni);
   }
+
   template<class T, class... Ts>
   void transmit(Ts&&... args) {
     self_->send(uplink_, T{std::forward<Ts>(args)...});
   }
+
   void message_received_cb(const node_id& src, const actor_addr& from,
                            const actor_addr& dest, message_id mid,
                            const message& msg) override {
