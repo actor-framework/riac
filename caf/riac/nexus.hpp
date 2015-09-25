@@ -29,11 +29,14 @@ namespace riac {
 
 class nexus : public nexus_type::base {
 public:
+  nexus(bool silent);
   behavior_type make_behavior() override;
 
 private:
   void broadcast();
-  void add_listener(listener_type hdl);
+  void add(listener_type hdl);
+
+  bool silent_;
   std::map<actor_addr, node_id> probes_;
   probe_data_map data_;
   std::set<listener_type> listeners_;

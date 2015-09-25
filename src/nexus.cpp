@@ -21,7 +21,8 @@
 
 #include <iostream>
 
-using std::cout;
+#include "caf/actor_ostream.hpp"
+
 using std::cerr;
 using std::endl;
 
@@ -30,7 +31,8 @@ using std::endl;
     cerr << #TypeName << " received with invalid source node" << endl;         \
     return;                                                                    \
   } else {                                                                     \
-    cout << "received " << #TypeName << endl;                                  \
+    if (! silent_)                                                             \
+      aout(this) << "received " << #TypeName << endl;                          \
   }                                                                            \
   static_cast<void>(0)
 
@@ -40,7 +42,8 @@ using std::endl;
       cerr << #TypeName << " received with invalid source node" << endl;       \
       return;                                                                  \
     }                                                                          \
-    cout << "received " << #TypeName << endl;                                  \
+    if (! silent_)                                                             \
+      aout(this) << "received " << #TypeName << endl;                          \
     data_[FieldName.source_node].FieldName = FieldName;                        \
     broadcast();                                                               \
   }
@@ -60,11 +63,15 @@ std::string format_down_msg(const std::string& type, const caf::down_msg& dm) {
 namespace caf {
 namespace riac {
 
-void nexus::add_listener(listener_type hdl) {
+nexus::nexus(bool silent) : silent_(silent) {
+  // nop
+}
+
+void nexus::add(listener_type hdl) {
   if (listeners_.insert(hdl).second) {
-    cout << "new listener: "
-         << to_string(actor_cast<actor>(hdl))
-         << endl;
+    if (! silent_)
+      aout(this) << "new listener: "
+                 << to_string(actor_cast<actor>(hdl)) << endl;
     monitor(hdl);
     send(hdl, data_);
   }
@@ -77,17 +84,21 @@ void nexus::broadcast() {
 
 nexus::behavior_type nexus::make_behavior() {
   return {
-    [=](const node_info& ni) {
+    [=](const node_info& ni, const actor& observer) {
       if (ni.source_node == caf::invalid_node_id) {
         cerr << "node_info received with invalid source node" << endl;
         return;
       }
-      cout << "received node_info " << endl;
+      if (! silent_)
+        aout(this) << "received node_info: "
+                   << to_string(current_message()) << endl;
       data_[ni.source_node].node = ni;
       auto& ls = current_sender();
       probes_[ls] = ls.node();
       monitor(ls);
       broadcast();
+      if (observer != invalid_actor)
+        send(observer, ok_atom::value, nexus_type{this});
     },
     HANDLE_UPDATE(ram_usage, ram),
     HANDLE_UPDATE(work_load, load),
@@ -117,31 +128,34 @@ nexus::behavior_type nexus::make_behavior() {
     [=](const route_lost& route) {
       CHECK_SOURCE(route_lost, route);
       if (data_[route.source_node].direct_routes.erase(route.dest) > 0) {
-        cout << "new route" << endl;
+        if (! silent_)
+          aout(this) << "new route" << endl;
         broadcast();
       }
     },
     [=](const new_message& msg) {
       // TODO: reduce message size by avoiding the complete msg
       CHECK_SOURCE(new_message, msg);
-      cout << "new message" << endl;
+      if (! silent_)
+        aout(this) << "new message: " << to_string(msg.msg) << endl;
       broadcast();
     },
     [=](const add_listener& req) {
-      //cout << "new listerner" << endl;
-      add_listener(actor_cast<listener_type>(req.listener));
+      add(actor_cast<listener_type>(req.listener));
     },
     [=](const add_typed_listener& req) {
-      add_listener(req.listener);
+      add(req.listener);
     },
     [=](const down_msg& dm) {
       if (listeners_.erase(actor_cast<listener_type>(dm.source)) > 0) {
-        cout << format_down_msg("listener", dm) << endl;
+        if (! silent_)
+          aout(this) << format_down_msg("listener", dm) << endl;
         return;
       }
       auto probe_addr = probes_.find(dm.source);
       if (probe_addr != probes_.end()) {
-        cout << format_down_msg("probe", dm) << endl;
+        if (! silent_)
+          aout(this) << format_down_msg("probe", dm) << endl;
         node_disconnected nd{probe_addr->second};
         send(this, nd);
         auto i = data_.find(probe_addr->second);

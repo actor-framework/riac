@@ -171,7 +171,7 @@ inline bool operator==(const probe_data& lhs, const probe_data& rhs) {
 using probe_data_map = std::map<node_id, probe_data>;
 
 /// An event sink consuming messages from the probes.
-using sink_type = typed_actor<reacts_to<node_info>,
+using sink_type = typed_actor<reacts_to<node_info, actor>,
                               reacts_to<ram_usage>,
                               reacts_to<work_load>,
                               reacts_to<new_route>,

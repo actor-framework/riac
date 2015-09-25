@@ -41,7 +41,7 @@ void run_probe(uint16_t port) {
 
 void run_nexus(bool launch_probe, uint16_t port) {
   scoped_actor self;
-  auto nexus = spawn<riac::nexus>();
+  auto nexus = spawn<riac::nexus>(true);
   self->send(nexus, riac::add_listener{self});
   port = io::typed_publish(nexus, port);
   CAF_MESSAGE("published nexus at port " << port);
@@ -55,7 +55,7 @@ void run_nexus(bool launch_probe, uint16_t port) {
                                       {"--probe=" + std::to_string(port)});
   }
   self->receive(
-    [&](const riac::node_info&) {
+    [&](const riac::node_info&, const actor&) {
       CAF_MESSAGE("received node info of probe");
     }
   );

@@ -53,7 +53,7 @@ std::string hostname() {
 
 class fwd_hook : public io::hook {
 public:
-  fwd_hook(nexus_type uplink)
+  fwd_hook(nexus_type uplink, actor observer)
       : self_(true),
         uplink_(uplink),
         node_(detail::singletons::get_node_id()) {
@@ -61,7 +61,7 @@ public:
     ni.source_node = detail::singletons::get_node_id();
     ni.interfaces = io::network::interfaces::list_all();
     ni.hostname = hostname();
-    self_->send(uplink_, ni);
+    self_->send(uplink_, std::move(ni), std::move(observer));
   }
 
   template<class T, class... Ts>
@@ -154,18 +154,17 @@ bool init_probe(const std::string& host, uint16_t port) {
   } catch (...) {
     return false;
   }
-  io::middleman::instance()->add_hook<fwd_hook>(uplink);
-  /*
-  // TODO: collect RAM and CPU usage + send to uplink
-  spawn<hidden>([uplink](event_based_actor* self) -> behavior {
-    self->send(self, atom("poll"));
-    return {
-      on(atom("poll")) >> [self] {
-        self->delayed_send(self, std::chrono::seconds(1), atom("poll"));
-      }
-    };
-  });
-  */
+  scoped_actor self;
+  io::middleman::instance()->add_hook<fwd_hook>(uplink, actor{self});
+  self->receive(
+    [](ok_atom, nexus_type) {
+      // nop
+    },
+    others >> [&] {
+      throw std::logic_error("unexpected message in init_probe: "
+                             + to_string(self->current_message()));
+    }
+  );
   return true;
 }
 
