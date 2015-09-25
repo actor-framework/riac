@@ -155,7 +155,7 @@ bool init_probe(const std::string& host, uint16_t port) {
     return false;
   }
   scoped_actor self;
-  io::middleman::instance()->add_hook<fwd_hook>(uplink, actor{self});
+  io::middleman::instance()->add_hook<fwd_hook>(uplink, self);
   self->receive(
     [](ok_atom, nexus_type) {
       // nop
