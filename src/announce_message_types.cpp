@@ -22,7 +22,7 @@
 #include <set>
 #include <map>
 
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 #include "caf/announce.hpp"
 
 #include "caf/io/network/protocol.hpp"
@@ -52,8 +52,8 @@ void announce_message_types() {
   announce<add_listener>("@add_listener", &add_listener::listener);
   announce<add_typed_listener>("@add_typed_listener",
                                &add_typed_listener::listener);
-  announce<optional<ram_usage>>("@opt_ram_usage");
-  announce<optional<work_load>>("@opt_work_load");
+  announce<maybe<ram_usage>>("@opt_ram_usage");
+  announce<maybe<work_load>>("@opt_work_load");
   announce<std::set<node_id>>("@opt_node_id");
   announce<std::pair<actor_addr, uint16_t>>("@pub_info");
   announce<std::set<std::pair<actor_addr, uint16_t>>>("@pub_info_set");

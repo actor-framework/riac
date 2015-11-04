@@ -27,7 +27,7 @@
 #include "caf/actor.hpp"
 #include "caf/node_id.hpp"
 #include "caf/announce.hpp"
-#include "caf/optional.hpp"
+#include "caf/maybe.hpp"
 #include "caf/typed_actor.hpp"
 
 #include "caf/io/network/interfaces.hpp"
@@ -127,7 +127,7 @@ struct new_message {
   node_id           dest_node;
   actor_id          source_actor;
   actor_id          dest_actor;
-  optional<message> msg;
+  maybe<message> msg;
 };
 
 inline bool operator==(const new_message& lhs, const new_message& rhs) {
@@ -154,8 +154,8 @@ inline bool operator==(const new_actor_published& lhs,
 /// Convenience structure to store data collected from probes.
 struct probe_data {
   node_info node;
-  optional<ram_usage> ram;
-  optional<work_load> load;
+  maybe<ram_usage> ram;
+  maybe<work_load> load;
   std::set<node_id> direct_routes;
   std::set<std::pair<actor_addr, uint16_t>> published_actors;
   std::set<actor_addr> known_actors;
