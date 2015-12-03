@@ -17,17 +17,20 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_RIAC_ANNOUNCE_MESSAGE_TYPES_HPP
-#define CAF_RIAC_ANNOUNCE_MESSAGE_TYPES_HPP
+#ifndef CAF_RIAC_ADD_MESSAGE_TYPES_HPP
+#define CAF_RIAC_ADD_MESSAGE_TYPES_HPP
+
+#include <string>
+#include <cstdint>
+
+#include "caf/fwd.hpp"
 
 namespace caf {
 namespace riac {
 
-/// Announces all types used either probes or nexi to the type system.
-void announce_message_types();
+void add_message_types(actor_system_config&);
 
 } // namespace riac
 } // namespace caf
 
-#endif // CAF_RIAC_ANNOUNCE_MESSAGE_TYPES_HPP
-
+#endif // CAF_RIAC_ADD_MESSAGE_TYPES_HPP

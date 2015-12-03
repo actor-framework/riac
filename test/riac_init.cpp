@@ -28,32 +28,35 @@
 #include "caf/io/all.hpp"
 #include "caf/riac/all.hpp"
 
-#include "caf/detail/run_sub_unit_test.hpp"
-
 using namespace caf;
 
 using std::cout;
 using std::endl;
 
-void run_probe(uint16_t port) {
-  CAF_CHECK(riac::init_probe("localhost", port));
+void run_probe(int argc, char** argv, uint16_t port) {
+  actor_system_config cfg{argc, argv};
+  cfg.nexus_host = "127.0.0.1";
+  cfg.nexus_port = port;
+  cfg.load<io::middleman>()
+     .load<riac::probe>();
+  actor_system system{cfg};
+  CAF_REQUIRE(system.probe().connected());
+  // system connects to the node during startup (ctor),
+  // then closes it on shutdown (dtor)
 }
 
-void run_nexus(bool launch_probe, uint16_t port) {
-  scoped_actor self;
-  auto nexus = spawn<riac::nexus>(true);
+void run_nexus(int argc, char** argv) {
+  actor_system_config cfg{argc, argv};
+  cfg.load<io::middleman>();
+  riac::add_message_types(cfg);
+  actor_system system{cfg};
+  scoped_actor self{system};
+  auto nexus = system.spawn<riac::nexus>(true);
   self->send(nexus, riac::add_listener{self});
-  port = io::typed_publish(nexus, port);
-  CAF_MESSAGE("published nexus at port " << port);
-  std::thread child;
-  if (launch_probe) {
-    child = detail::run_sub_unit_test(self,
-                                      test::engine::path(),
-                                      test::engine::max_runtime(),
-                                      CAF_XSTR(CAF_SUITE),
-                                      false,
-                                      {"--probe=" + std::to_string(port)});
-  }
+  auto port = system.middleman().publish(nexus, 0);
+  CAF_REQUIRE(port);
+  CAF_MESSAGE("published nexus at port " << *port);
+  std::thread child{[=] { run_probe(argc, argv, *port); }};
   self->receive(
     [&](const riac::node_info&, const actor&) {
       CAF_MESSAGE("received node info of probe");
@@ -64,21 +67,15 @@ void run_nexus(bool launch_probe, uint16_t port) {
       CAF_MESSAGE("probe disconnected");
     }
   );
-  if (launch_probe) {
-    child.join();
-    self->receive(
-      [](const std::string& output) {
-        cout << endl << endl << "*** output of client program ***"
-             << endl << output << endl;
-      }
-    );
-  }
   anon_send_exit(nexus, exit_reason::kill);
+  child.join();
 }
 
 CAF_TEST(riac_init) {
-  auto argv = test::engine::argv();
   auto argc = test::engine::argc();
+  auto argv = test::engine::argv();
+  run_nexus(argc, argv);
+  /*
   CAF_MESSAGE("this node is: " << to_string(detail::singletons::get_node_id()));
   uint16_t port = 0;
   auto r = message_builder(argv, argv + argc).extract_opts({
@@ -100,4 +97,5 @@ CAF_TEST(riac_init) {
   }
   await_all_actors_done();
   shutdown();
+  */
 }

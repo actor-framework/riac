@@ -84,11 +84,11 @@ nexus_proxy(nexus_proxy_type::stateful_pointer<nexus_proxy_state> self) {
           result.push_back(kvp.first);
       return result;
     },
-    [=](get_node, const node_id& nid) -> either<node_info>::or_else<error_atom> {
+    [=](get_node, const node_id& nid) -> maybe<node_info> {
       auto i = self->state.data.find(nid);
       if (i == self->state.data.end())
-        return {error_atom::value};
-      return {i->second.node};
+        return sec::no_such_riac_node;
+      return i->second.node;
     },
     [=](list_peers, const node_id& ni) -> std::vector<node_id> {
       std::vector<node_id> result;
@@ -99,19 +99,17 @@ nexus_proxy(nexus_proxy_type::stateful_pointer<nexus_proxy_state> self) {
       }
       return result;
     },
-    [=](get_sys_load, const node_id& nid)
-    -> either<work_load>::or_else<error_atom> {
+    [=](get_sys_load, const node_id& nid) -> maybe<work_load> {
       auto i = self->state.data.find(nid);
       if (i == self->state.data.end() || ! i->second.load) {
-        return error_atom::value;
+        return sec::no_such_riac_node;
       }
       return *(i->second.load);
     },
-    [=](get_ram_usage, const node_id& nid)
-    -> either<ram_usage>::or_else<error_atom> {
+    [=](get_ram_usage, const node_id& nid) -> maybe<ram_usage> {
       auto i = self->state.data.find(nid);
       if (i == self->state.data.end() || ! i->second.ram)
-        return error_atom::value;
+        return sec::no_such_riac_node;
       return *(i->second.ram);
     },
     [=](list_actors, const node_id& nid) -> std::vector<actor_addr> {

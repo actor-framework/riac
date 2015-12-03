@@ -59,13 +59,10 @@ using nexus_proxy_type =
     reacts_to<probe_data_map>,
     replies_to<list_nodes>::with<std::vector<node_id>>,
     replies_to<list_nodes, std::string>::with<std::vector<node_id>>,
-    replies_to<get_node, node_id>::with_either<node_info>::
-                                   or_else<error_atom>,
+    replies_to<get_node, node_id>::with<node_info>,
     replies_to<list_peers, node_id>::with<std::vector<node_id>>,
-    replies_to<get_sys_load, node_id>::with_either<work_load>::
-                                       or_else<error_atom>,
-    replies_to<get_ram_usage, node_id>::with_either<ram_usage>::
-                                        or_else<error_atom>,
+    replies_to<get_sys_load, node_id>::with<work_load>,
+    replies_to<get_ram_usage, node_id>::with<ram_usage>,
     replies_to<list_actors, node_id>::with<std::vector<actor_addr>>,
     replies_to<get_actor, node_id, actor_id>::with<actor_addr>
   >;

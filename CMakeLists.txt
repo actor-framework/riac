@@ -7,10 +7,10 @@ file(GLOB CAF_RIAC_HDRS "caf/riac/*.hpp")
 
 # list cpp files excluding platform-dependent files
 set (CAF_RIAC_SRCS
-     src/announce_message_types.cpp
+     src/add_message_types.cpp
      src/nexus.cpp
      src/nexus_proxy.cpp
-     src/init_probe.cpp)
+     src/probe.cpp)
 
 add_custom_target(libcaf_riac)
 

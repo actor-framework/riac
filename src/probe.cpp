@@ -17,7 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/riac/init_probe.hpp"
+#include "caf/riac/probe.hpp"
 
 #include <unistd.h>
 
@@ -27,11 +27,11 @@
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
-#include "caf/riac/all.hpp"
+
+#include "caf/riac/nexus.hpp"
+#include "caf/riac/add_message_types.hpp"
 
 #include "caf/io/network/interfaces.hpp"
-
-#include "caf/detail/singletons.hpp"
 
 namespace caf {
 namespace riac {
@@ -53,12 +53,12 @@ std::string hostname() {
 
 class fwd_hook : public io::hook {
 public:
-  fwd_hook(nexus_type uplink, actor observer)
-      : self_(true),
+  fwd_hook(actor_system& sys, nexus_type uplink, actor observer)
+      : self_(sys, true),
         uplink_(uplink),
-        node_(detail::singletons::get_node_id()) {
+        node_(sys.node()) {
     node_info ni;
-    ni.source_node = detail::singletons::get_node_id();
+    ni.source_node = sys.node();
     ni.interfaces = io::network::interfaces::list_all();
     ni.hostname = hostname();
     self_->send(uplink_, std::move(ni), std::move(observer));
@@ -146,6 +146,62 @@ private:
 
 } // namespace <anonymous>
 
+probe::probe(actor_system& sys) : system_(sys) {
+  // nop
+}
+
+void probe::start() {
+  CAF_LOG_TRACE("");
+  try {
+    uplink_ = system_.middleman().typed_remote_actor<nexus_type>(nexus_host_,
+                                                                 nexus_port_);
+  }
+  catch (std::exception& e) {
+    CAF_LOG_ERROR("could not connect to Nexus:"
+                  << CAF_ARG(nexus_host_) << CAF_ARG(nexus_port_)
+                  << CAF_ARG(e.what()));
+    return;
+  }
+  scoped_actor self{system_};
+  system_.middleman().add_hook<fwd_hook>(uplink_, self);
+  self->receive(
+    [](ok_atom, nexus_type) {
+      // nop
+    },
+    others >> [&] {
+      CAF_LOG_ERROR("unexpected:" << CAF_ARG(self->current_message()));
+    }
+  );
+}
+
+void probe::stop() {
+  // nop
+}
+
+void probe::init(actor_system_config& cfg) {
+  CAF_LOG_TRACE("");
+  add_message_types(cfg);
+  nexus_port_ = cfg.nexus_port;
+  nexus_host_ = std::move(cfg.nexus_host);
+}
+
+actor_system::module::id_t probe::id() const {
+  return actor_system::module::riac_probe;
+}
+
+bool probe::connected() {
+  return uplink_ != invalid_actor;
+}
+
+void* probe::subtype_ptr() {
+  return this;
+}
+
+actor_system::module* probe::make(actor_system& sys, detail::type_list<>) {
+  return new probe{sys};
+}
+
+/*
 bool init_probe(const std::string& host, uint16_t port) {
   announce_message_types();
   nexus_type uplink;
@@ -183,6 +239,7 @@ bool init_probe(int argc, char** argv) {
   }
   return init_probe(host, port);
 }
+*/
 
 } // namespace riac
 } // namespace caf

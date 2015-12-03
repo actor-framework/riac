@@ -54,7 +54,7 @@ std::string format_down_msg(const std::string& type, const caf::down_msg& dm) {
   std::stringstream ds;
   ds << type << " "
      << to_string(dm.source) << " exited with reason "
-     << dm.reason;
+     << to_string(dm.reason);
   return ds.str();
 }
 
@@ -63,7 +63,9 @@ std::string format_down_msg(const std::string& type, const caf::down_msg& dm) {
 namespace caf {
 namespace riac {
 
-nexus::nexus(bool silent) : silent_(silent) {
+nexus::nexus(actor_config& cfg, bool silent)
+    : nexus_type::base(cfg),
+      silent_(silent) {
   // nop
 }
 

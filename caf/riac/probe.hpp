@@ -17,35 +17,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_RIAC_NEXUS_HPP
-#define CAF_RIAC_NEXUS_HPP
+#ifndef CAF_RIAC_PROBE_HPP
+#define CAF_RIAC_PROBE_HPP
 
-#include <map>
-#include <set>
+#include <string>
+#include <cstdint>
 
-#include "caf/typed_event_based_actor.hpp"
+#include "caf/actor_system.hpp"
 
-#include "caf/riac/message_types.hpp"
+#include "caf/riac/nexus.hpp"
 
 namespace caf {
 namespace riac {
 
-class nexus : public nexus_type::base {
+class probe : public actor_system::module {
 public:
-  nexus(actor_config& cfg, bool silent);
-  behavior_type make_behavior() override;
+  probe(actor_system& sys);
+
+  void start() override;
+
+  void stop() override;
+
+  void init(actor_system_config&) override;
+
+  id_t id() const override;
+
+  bool connected();
+
+  void* subtype_ptr() override;
+
+  static actor_system::module* make(actor_system&, detail::type_list<>);
 
 private:
-  void broadcast();
-  void add(listener_type hdl);
-
-  bool silent_;
-  std::map<actor_addr, node_id> probes_;
-  probe_data_map data_;
-  std::set<listener_type> listeners_;
+  actor_system& system_;
+  std::string nexus_host_;
+  uint16_t nexus_port_;
+  nexus_type uplink_;
 };
 
 } // namespace riac
 } // namespace caf
 
-#endif // CAF_RIAC_NEXUS_HPP
+#endif // CAF_RIAC_PROBE_HPP
