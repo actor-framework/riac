@@ -63,8 +63,8 @@ using nexus_proxy_type =
     replies_to<list_peers, node_id>::with<std::vector<node_id>>,
     replies_to<get_sys_load, node_id>::with<work_load>,
     replies_to<get_ram_usage, node_id>::with<ram_usage>,
-    replies_to<list_actors, node_id>::with<std::vector<actor_addr>>,
-    replies_to<get_actor, node_id, actor_id>::with<actor_addr>
+    replies_to<list_actors, node_id>::with<std::vector<strong_actor_ptr>>,
+    replies_to<get_actor, node_id, actor_id>::with<strong_actor_ptr>
   >;
 
 nexus_proxy_type::behavior_type

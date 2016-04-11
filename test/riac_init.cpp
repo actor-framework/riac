@@ -54,9 +54,9 @@ void run_nexus(int argc, char** argv) {
   auto nexus = system.spawn<riac::nexus>(true);
   self->send(nexus, riac::add_listener{self});
   auto port = system.middleman().publish(nexus, 0);
-  CAF_REQUIRE(port);
-  CAF_MESSAGE("published nexus at port " << *port);
-  std::thread child{[=] { run_probe(argc, argv, *port); }};
+  CAF_REQUIRE(port != 0);
+  CAF_MESSAGE("published nexus at port " << port);
+  std::thread child{[=] { run_probe(argc, argv, port); }};
   self->receive(
     [&](const riac::node_info&, const actor&) {
       CAF_MESSAGE("received node info of probe");

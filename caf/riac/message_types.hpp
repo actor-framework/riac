@@ -197,7 +197,7 @@ void serialize(T& in_or_out, new_message& x, const unsigned int) {
 
 struct new_actor_published {
   node_id source_node;
-  actor_addr published_actor;
+  strong_actor_ptr published_actor;
   uint16_t port;
 };
 
@@ -221,8 +221,8 @@ struct probe_data {
   maybe<ram_usage> ram;
   maybe<work_load> load;
   std::set<node_id> direct_routes;
-  std::set<std::pair<actor_addr, uint16_t>> published_actors;
-  std::set<actor_addr> known_actors;
+  std::set<std::pair<strong_actor_ptr, uint16_t>> published_actors;
+  std::set<strong_actor_ptr> known_actors;
 };
 
 inline bool operator==(const probe_data& lhs, const probe_data& rhs) {

@@ -95,8 +95,8 @@ nexus::behavior_type nexus::make_behavior() {
         aout(this) << "received node_info: "
                    << to_string(current_message()) << endl;
       data_[ni.source_node].node = ni;
-      auto& ls = current_sender();
-      probes_[ls] = ls.node();
+      auto ls = current_element_->sender;
+      probes_[ls] = ls ? ls->node() : invalid_node_id;
       monitor(ls);
       broadcast();
       if (observer != invalid_actor)
@@ -108,7 +108,7 @@ nexus::behavior_type nexus::make_behavior() {
       CHECK_SOURCE(actor_published, msg);
       auto addr = msg.published_actor;
       auto nid = msg.source_node;
-      if (addr == invalid_actor_addr) {
+      if (! addr) {
         cerr << "received actor_published "
              << "with invalid actor address"
              << endl;
@@ -154,7 +154,7 @@ nexus::behavior_type nexus::make_behavior() {
           aout(this) << format_down_msg("listener", dm) << endl;
         return;
       }
-      auto probe_addr = probes_.find(dm.source);
+      auto probe_addr = probes_.find(actor_cast<strong_actor_ptr>(dm.source));
       if (probe_addr != probes_.end()) {
         if (! silent_)
           aout(this) << format_down_msg("probe", dm) << endl;

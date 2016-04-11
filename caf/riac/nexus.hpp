@@ -40,7 +40,7 @@ private:
   void add(listener_type hdl);
 
   bool silent_;
-  std::map<actor_addr, node_id> probes_;
+  std::map<strong_actor_ptr, node_id> probes_;
   probe_data_map data_;
   std::set<listener_type> listeners_;
 };

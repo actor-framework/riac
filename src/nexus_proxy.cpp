@@ -50,9 +50,8 @@ nexus_proxy(nexus_proxy_type::stateful_pointer<nexus_proxy_state> self) {
     [=](const new_actor_published& msg) {
       auto addr = msg.published_actor;
       auto nid = msg.source_node;
-      if (addr == invalid_actor_addr) {
+      if (! addr)
         return;
-      }
       self->state.data[nid].known_actors.insert(addr);
       self->state.data[nid].published_actors.insert(std::make_pair(addr, msg.port));
     },
@@ -84,7 +83,7 @@ nexus_proxy(nexus_proxy_type::stateful_pointer<nexus_proxy_state> self) {
           result.push_back(kvp.first);
       return result;
     },
-    [=](get_node, const node_id& nid) -> maybe<node_info> {
+    [=](get_node, const node_id& nid) -> result<node_info> {
       auto i = self->state.data.find(nid);
       if (i == self->state.data.end())
         return sec::no_such_riac_node;
@@ -99,35 +98,34 @@ nexus_proxy(nexus_proxy_type::stateful_pointer<nexus_proxy_state> self) {
       }
       return result;
     },
-    [=](get_sys_load, const node_id& nid) -> maybe<work_load> {
+    [=](get_sys_load, const node_id& nid) -> result<work_load> {
       auto i = self->state.data.find(nid);
-      if (i == self->state.data.end() || ! i->second.load) {
+      if (i == self->state.data.end() || ! i->second.load)
         return sec::no_such_riac_node;
-      }
       return *(i->second.load);
     },
-    [=](get_ram_usage, const node_id& nid) -> maybe<ram_usage> {
+    [=](get_ram_usage, const node_id& nid) -> result<ram_usage> {
       auto i = self->state.data.find(nid);
       if (i == self->state.data.end() || ! i->second.ram)
         return sec::no_such_riac_node;
       return *(i->second.ram);
     },
-    [=](list_actors, const node_id& nid) -> std::vector<actor_addr> {
-      std::vector<actor_addr> result;
+    [=](list_actors, const node_id& nid) -> std::vector<strong_actor_ptr> {
+      std::vector<strong_actor_ptr> result;
       for (auto& addr : self->state.data[nid].known_actors)
         result.push_back(addr);
       return result;
     },
-    [=](get_actor, const node_id& nid, actor_id aid) -> actor_addr {
+    [=](get_actor, const node_id& nid, actor_id aid) -> strong_actor_ptr {
       auto& known_actors = self->state.data[nid].known_actors;
       auto last = known_actors.end();
-      auto pred = [aid](const actor_addr& addr) {
-        return addr.id() == aid;
+      auto pred = [aid](const strong_actor_ptr& addr) {
+        return addr && addr->id() == aid;
       };
       auto i = std::find_if(known_actors.begin(), last, pred);
       if (i != last)
         return *i;
-      return invalid_actor_addr;
+      return nullptr;
     },
     [=](const down_msg& ) {
       // nop

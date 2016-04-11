@@ -64,28 +64,33 @@ public:
     self_->send(uplink_, std::move(ni), std::move(observer));
   }
 
+  node_id node(const strong_actor_ptr& x) {
+    return x ? invalid_node_id : x->node();
+  }
+
+  actor_id id(const strong_actor_ptr& x) {
+    return x ? invalid_actor_id : x->id();
+  }
+
   template<class T, class... Ts>
   void transmit(Ts&&... args) {
     self_->send(uplink_, T{std::forward<Ts>(args)...});
   }
 
-  void message_received_cb(const node_id& src, const actor_addr& from,
-                           const actor_addr& dest, message_id mid,
+  void message_received_cb(const node_id& src, const strong_actor_ptr& from,
+                           const strong_actor_ptr& dest, message_id mid,
                            const message& msg) override {
-    transmit<new_message>(from.node(), dest.node(), from.id(),
-                                       dest.id(), msg);
+    transmit<new_message>(node(from), node(dest), id(from), id(dest), msg);
     call_next<message_received>(src, from, dest, mid, msg);
   }
 
-  void message_sent_cb(const actor_addr& from, const node_id& hop,
-                       const actor_addr& dest, message_id mid,
+  void message_sent_cb(const strong_actor_ptr& from, const node_id& hop,
+                       const strong_actor_ptr& dest, message_id mid,
                        const message& msg) override {
-    if (dest == uplink_) {
-      // let's avoid endless recursion, shall we?
+    // avoid endless recursion
+    if (dest == uplink_)
       return;
-    }
-    transmit<new_message>(from.node(), dest.node(), from.id(),
-                                       dest.id(), msg);
+    transmit<new_message>(node(from), node(dest), id(from), id(dest), msg);
     call_next<message_sent>(from, hop, dest, mid, msg);
   }
 
@@ -101,21 +106,21 @@ public:
     call_next<message_forwarding_failed>(hdr, payload);
   }
 
-  void message_sending_failed_cb(const actor_addr& from, const actor_addr& dest,
-                                 message_id mid,
+  void message_sending_failed_cb(const strong_actor_ptr& from,
+                                 const strong_actor_ptr& dest, message_id mid,
                                  const message& payload) override {
     // do nothing (yet)
     call_next<message_sending_failed>(from, dest, mid, payload);
   }
 
-  void actor_published_cb(const actor_addr& addr,
+  void actor_published_cb(const strong_actor_ptr& addr,
                           const std::set<std::string>& ifs,
                           uint16_t port) override {
     transmit<new_actor_published>(node_, addr, port);
     call_next<actor_published>(addr, ifs, port);
   }
 
-  void new_remote_actor_cb(const actor_addr& addr) override {
+  void new_remote_actor_cb(const strong_actor_ptr& addr) override {
     // do nothing (yet)
     call_next<new_remote_actor>(addr);
   }
@@ -131,7 +136,7 @@ public:
   }
 
   void invalid_message_received_cb(const node_id& source,
-                                   const actor_addr& sender,
+                                   const strong_actor_ptr& sender,
                                    actor_id invalid_dest, message_id mid,
                                    const message& msg) override {
     // do nothing (yet)
@@ -200,46 +205,6 @@ void* probe::subtype_ptr() {
 actor_system::module* probe::make(actor_system& sys, detail::type_list<>) {
   return new probe{sys};
 }
-
-/*
-bool init_probe(const std::string& host, uint16_t port) {
-  announce_message_types();
-  nexus_type uplink;
-  try {
-    uplink = io::typed_remote_actor<nexus_type>(host, port);
-  } catch (...) {
-    return false;
-  }
-  scoped_actor self;
-  io::middleman::instance()->add_hook<fwd_hook>(uplink, self);
-  self->receive(
-    [](ok_atom, nexus_type) {
-      // nop
-    },
-    others >> [&] {
-      throw std::logic_error("unexpected message in init_probe: "
-                             + to_string(self->current_message()));
-    }
-  );
-  return true;
-}
-
-bool init_probe(int argc, char** argv) {
-  std::string host;
-  uint16_t port = 0;
-  message_builder(argv + 1, argv + argc).extract_opts({
-    {"caf-nexus-host", "IP or hostname of nexus", host},
-    {"caf-nexus-port", "port of published nexus actor", port}
-  });
-  if (port == 0 || host.empty()) {
-    std::cerr << "port or hostname for nexus missing, please use "
-                 "--caf-nexus-host=HOST and --caf-nexus-port=PORT to "
-                 "configure this probe" << std::endl;
-    return false;
-  }
-  return init_probe(host, port);
-}
-*/
 
 } // namespace riac
 } // namespace caf
