@@ -172,9 +172,6 @@ void probe::start() {
   self->receive(
     [](ok_atom, nexus_type) {
       // nop
-    },
-    others >> [&] {
-      CAF_LOG_ERROR("unexpected:" << CAF_ARG(self->current_message()));
     }
   );
 }
