@@ -45,7 +45,7 @@ using std::endl;
     if (! silent_)                                                             \
       aout(this) << "received " << #TypeName << endl;                          \
     data_[FieldName.source_node].FieldName = FieldName;                        \
-    broadcast();                                                               \
+    broadcast(FieldName);                                                      \
   }
 
 namespace {
@@ -79,11 +79,6 @@ void nexus::add(listener_type hdl) {
   }
 }
 
-void nexus::broadcast() {
-  for (auto& l : listeners_)
-    send(actor_cast<actor>(l), current_message());
-}
-
 nexus::behavior_type nexus::make_behavior() {
   return {
     [=](const node_info& ni, const actor& observer) {
@@ -92,13 +87,12 @@ nexus::behavior_type nexus::make_behavior() {
         return;
       }
       if (! silent_)
-        aout(this) << "received node_info: "
-                   << to_string(current_message()) << endl;
+        aout(this) << "received node_info: " << to_string(ni) << endl;
       data_[ni.source_node].node = ni;
       auto ls = current_element_->sender;
       probes_[ls] = ls ? ls->node() : invalid_node_id;
       monitor(ls);
-      broadcast();
+      broadcast(ni, observer);
       if (observer != invalid_actor)
         send(observer, ok_atom::value, nexus_type{this});
     },
@@ -118,13 +112,13 @@ nexus::behavior_type nexus::make_behavior() {
         monitor(addr);
       }
       data_[nid].published_actors.insert(std::make_pair(addr, msg.port));
-      broadcast();
+      broadcast(msg);
     },
     [=](const new_route& route) {
       CHECK_SOURCE(new_route, route);
       if (route.is_direct
           && data_[route.source_node].direct_routes.insert(route.dest).second) {
-        broadcast();
+        broadcast(route);
       }
     },
     [=](const route_lost& route) {
@@ -132,7 +126,7 @@ nexus::behavior_type nexus::make_behavior() {
       if (data_[route.source_node].direct_routes.erase(route.dest) > 0) {
         if (! silent_)
           aout(this) << "new route" << endl;
-        broadcast();
+        broadcast(route);
       }
     },
     [=](const new_message& msg) {
@@ -140,7 +134,7 @@ nexus::behavior_type nexus::make_behavior() {
       CHECK_SOURCE(new_message, msg);
       if (! silent_)
         aout(this) << "new message: " << to_string(msg.msg) << endl;
-      broadcast();
+      broadcast(msg);
     },
     [=](const add_listener& req) {
       add(actor_cast<listener_type>(req.listener));
@@ -169,7 +163,7 @@ nexus::behavior_type nexus::make_behavior() {
     },
     [=](const node_disconnected& nd) {
       data_.erase(nd.source_node);
-      broadcast();
+      broadcast(nd);
     }
   };
 }

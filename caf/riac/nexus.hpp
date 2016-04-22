@@ -36,7 +36,12 @@ public:
   behavior_type make_behavior() override;
 
 private:
-  void broadcast();
+  template <class... Ts>
+  void broadcast(Ts&... xs) {
+    for (auto& l : listeners_)
+      send(actor_cast<actor>(l), xs...);
+  }
+
   void add(listener_type hdl);
 
   bool silent_;

@@ -56,6 +56,14 @@ struct node_info {
   io::network::interfaces_map interfaces;
 };
 
+inline std::string to_string(const node_info& x) {
+  return "node_info" + deep_to_string(std::forward_as_tuple(x.source_node,
+                                                            x.cpu,
+                                                            x.hostname,
+                                                            x.os,
+                                                            x.interfaces));
+}
+
 template <class T>
 void serialize(T& in_or_out, node_info& x, const unsigned int) {
   in_or_out & x.source_node;
