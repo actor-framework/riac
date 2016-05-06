@@ -126,10 +126,7 @@ nexus_proxy(nexus_proxy_type::stateful_pointer<nexus_proxy_state> self) {
       if (i != last)
         return *i;
       return nullptr;
-    },
-    [=](const down_msg& ) {
-      // nop
-    },
+    }
   };
 }
 

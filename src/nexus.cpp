@@ -66,7 +66,25 @@ namespace riac {
 nexus::nexus(actor_config& cfg, bool silent)
     : nexus_type::base(cfg),
       silent_(silent) {
-  // nop
+  set_down_handler([=](down_msg& dm) {
+    if (listeners_.erase(actor_cast<listener_type>(dm.source)) > 0) {
+      if (! silent_)
+        aout(this) << format_down_msg("listener", dm) << endl;
+      return;
+    }
+    auto probe_addr = probes_.find(actor_cast<strong_actor_ptr>(dm.source));
+    if (probe_addr != probes_.end()) {
+      if (! silent_)
+        aout(this) << format_down_msg("probe", dm) << endl;
+      node_disconnected nd{probe_addr->second};
+      send(this, nd);
+      auto i = data_.find(probe_addr->second);
+      if (i != data_.end()
+          && i->second.known_actors.erase(probe_addr->first) > 0) {
+        return;
+      }
+    }
+  });
 }
 
 void nexus::add(listener_type hdl) {
@@ -141,25 +159,6 @@ nexus::behavior_type nexus::make_behavior() {
     },
     [=](const add_typed_listener& req) {
       add(req.listener);
-    },
-    [=](const down_msg& dm) {
-      if (listeners_.erase(actor_cast<listener_type>(dm.source)) > 0) {
-        if (! silent_)
-          aout(this) << format_down_msg("listener", dm) << endl;
-        return;
-      }
-      auto probe_addr = probes_.find(actor_cast<strong_actor_ptr>(dm.source));
-      if (probe_addr != probes_.end()) {
-        if (! silent_)
-          aout(this) << format_down_msg("probe", dm) << endl;
-        node_disconnected nd{probe_addr->second};
-        send(this, nd);
-        auto i = data_.find(probe_addr->second);
-        if (i != data_.end()
-            && i->second.known_actors.erase(probe_addr->first) > 0) {
-          return;
-        }
-      }
     },
     [=](const node_disconnected& nd) {
       data_.erase(nd.source_node);
