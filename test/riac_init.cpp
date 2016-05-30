@@ -34,31 +34,34 @@ using std::cout;
 using std::endl;
 
 void run_probe(int argc, char** argv, uint16_t port) {
-  actor_system_config cfg{argc, argv};
+  actor_system_config cfg;
+  cfg.parse(argc, argv);
   cfg.nexus_host = "127.0.0.1";
   cfg.nexus_port = port;
   cfg.load<io::middleman>()
      .load<riac::probe>();
   actor_system system{cfg};
+  CAF_REQUIRE(system.node() != invalid_node_id);
   CAF_REQUIRE(system.probe().connected());
   // system connects to the node during startup (ctor),
   // then closes it on shutdown (dtor)
 }
 
 void run_nexus(int argc, char** argv) {
-  actor_system_config cfg{argc, argv};
+  actor_system_config cfg;
+  cfg.parse(argc, argv);
   cfg.load<io::middleman>();
   riac::add_message_types(cfg);
   actor_system system{cfg};
   scoped_actor self{system};
   auto nexus = system.spawn<riac::nexus>(true);
-  self->send(nexus, riac::add_listener{self});
+  self->send(nexus, add_atom::value, self);
   auto port = system.middleman().publish(nexus, 0);
   CAF_REQUIRE(port != 0);
   CAF_MESSAGE("published nexus at port " << port);
   std::thread child{[=] { run_probe(argc, argv, port); }};
   self->receive(
-    [&](const riac::node_info&, const actor&) {
+    [&](const riac::node_info&) {
       CAF_MESSAGE("received node info of probe");
     }
   );

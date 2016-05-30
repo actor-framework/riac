@@ -29,25 +29,25 @@ namespace caf {
 namespace riac {
 
 /// Used to query all known nodes from nexus
-using list_nodes = atom_constant<atom("ListNodes")>;
+using list_nodes = atom_constant<atom("listNodes")>;
 
 /// Used to query meta information about a particular node.
-using get_node = atom_constant<atom("Node")>;
+using get_node = atom_constant<atom("getNode")>;
 
 /// Used to query all peers of a particular node.
-using list_peers = atom_constant<atom("ListPeers")>;
+using list_peers = atom_constant<atom("listPeers")>;
 
 /// Used to query system load information on a particular node.
-using get_sys_load = atom_constant<atom("SysLoad")>;
+using get_sys_load = atom_constant<atom("getSysLoad")>;
 
 /// Used to query RAM usage on a particular node.
-using get_ram_usage = atom_constant<atom("RamUsage")>;
+using get_ram_usage = atom_constant<atom("getRam")>;
 
 /// Used to query all known actors on a particular node.
-using list_actors = atom_constant<atom("ListActors")>;
+using list_actors = atom_constant<atom("listActors")>;
 
 /// Used to query a single actor on a particular node.
-using get_actor = atom_constant<atom("Actor")>;
+using get_actor = atom_constant<atom("getActor")>;
 
 struct nexus_proxy_state {
   riac::probe_data_map data;

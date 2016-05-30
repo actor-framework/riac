@@ -28,7 +28,8 @@ using std::endl;
 
 #define CHECK_SOURCE(TypeName, VarName)                                        \
   if (VarName.source_node == caf::invalid_node_id) {                           \
-    cerr << #TypeName << " received with invalid source node" << endl;         \
+    if (! silent_)                                                             \
+      cerr << #TypeName << " received with invalid source node" << endl;       \
     return;                                                                    \
   } else {                                                                     \
     if (! silent_)                                                             \
@@ -54,7 +55,7 @@ std::string format_down_msg(const std::string& type, const caf::down_msg& dm) {
   std::stringstream ds;
   ds << type << " "
      << to_string(dm.source) << " exited with reason "
-     << to_string(dm.reason);
+     << dm.source.home_system().render(dm.reason);
   return ds.str();
 }
 
@@ -67,7 +68,11 @@ nexus::nexus(actor_config& cfg, bool silent)
     : nexus_type::base(cfg),
       silent_(silent) {
   set_down_handler([=](down_msg& dm) {
-    if (listeners_.erase(actor_cast<listener_type>(dm.source)) > 0) {
+    auto ptr = actor_cast<strong_actor_ptr>(dm.source);
+    if (! ptr)
+      return;
+    auto hdl = actor_cast<listener_type>(std::move(ptr));
+    if (listeners_.erase(hdl) > 0) {
       if (! silent_)
         aout(this) << format_down_msg("listener", dm) << endl;
       return;
@@ -89,9 +94,6 @@ nexus::nexus(actor_config& cfg, bool silent)
 
 void nexus::add(listener_type hdl) {
   if (listeners_.insert(hdl).second) {
-    if (! silent_)
-      aout(this) << "new listener: "
-                 << to_string(actor_cast<actor>(hdl)) << endl;
     monitor(hdl);
     send(hdl, data_);
   }
@@ -99,7 +101,7 @@ void nexus::add(listener_type hdl) {
 
 nexus::behavior_type nexus::make_behavior() {
   return {
-    [=](const node_info& ni, const actor& observer) {
+    [=](const node_info& ni) {
       if (ni.source_node == caf::invalid_node_id) {
         cerr << "node_info received with invalid source node" << endl;
         return;
@@ -110,9 +112,7 @@ nexus::behavior_type nexus::make_behavior() {
       auto ls = current_element_->sender;
       probes_[ls] = ls ? ls->node() : invalid_node_id;
       monitor(ls);
-      broadcast(ni, observer);
-      if (observer != invalid_actor)
-        send(observer, ok_atom::value, nexus_type{this});
+      broadcast(ni);
     },
     HANDLE_UPDATE(ram_usage, ram),
     HANDLE_UPDATE(work_load, load),
@@ -154,13 +154,21 @@ nexus::behavior_type nexus::make_behavior() {
         aout(this) << "new message: " << to_string(msg.msg) << endl;
       broadcast(msg);
     },
-    [=](const add_listener& req) {
-      add(actor_cast<listener_type>(req.listener));
+    [=](add_atom, actor x) {
+      if (! silent_)
+        aout(this) << "new dynamically typed listener: "
+                   << to_string(x) << endl;
+      add(actor_cast<listener_type>(std::move(x)));
     },
-    [=](const add_typed_listener& req) {
-      add(req.listener);
+    [=](add_atom, listener_type x) {
+      if (! silent_)
+        aout(this) << "new statically typed listener: "
+                   << to_string(x) << endl;
+      add(std::move(x));
     },
     [=](const node_disconnected& nd) {
+      if (! silent_)
+        aout(this) << "node_disconnected: " << to_string(nd) << endl;
       data_.erase(nd.source_node);
       broadcast(nd);
     }

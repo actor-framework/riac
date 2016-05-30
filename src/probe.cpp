@@ -53,15 +53,24 @@ std::string hostname() {
 
 class fwd_hook : public io::hook {
 public:
-  fwd_hook(actor_system& sys, nexus_type uplink, actor observer)
+  fwd_hook(actor_system& sys, nexus_type uplink)
       : self_(sys, true),
         uplink_(uplink),
         node_(sys.node()) {
+    // nop
+  }
+
+  void register_at_nexus() {
+    CAF_ASSERT(self_.home_system().node() != invalid_node_id);
     node_info ni;
-    ni.source_node = sys.node();
+    ni.source_node = self_.home_system().node();
     ni.interfaces = io::network::interfaces::list_all();
     ni.hostname = hostname();
-    self_->send(uplink_, std::move(ni), std::move(observer));
+    self_->request(uplink_, infinite, std::move(ni)).receive(
+      [] {
+        // nop
+      }
+    );
   }
 
   node_id node(const strong_actor_ptr& x) {
@@ -151,7 +160,9 @@ private:
 
 } // namespace <anonymous>
 
-probe::probe(actor_system& sys) : system_(sys) {
+probe::probe(actor_system& sys)
+    : system_(sys),
+      uplink_(unsafe_actor_handle_init) {
   // nop
 }
 
@@ -167,13 +178,8 @@ void probe::start() {
                   << CAF_ARG(e.what()));
     return;
   }
-  scoped_actor self{system_};
-  system_.middleman().add_hook<fwd_hook>(uplink_, self);
-  self->receive(
-    [](ok_atom, nexus_type) {
-      // nop
-    }
-  );
+  auto ptr = system_.middleman().add_hook<fwd_hook>(uplink_);
+  ptr->register_at_nexus();
 }
 
 void probe::stop() {
@@ -192,7 +198,7 @@ actor_system::module::id_t probe::id() const {
 }
 
 bool probe::connected() {
-  return uplink_ != invalid_actor;
+  return ! uplink_.unsafe();
 }
 
 void* probe::subtype_ptr() {

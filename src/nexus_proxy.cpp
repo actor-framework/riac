@@ -26,10 +26,8 @@ nexus_proxy_type::behavior_type
 nexus_proxy(nexus_proxy_type::stateful_pointer<nexus_proxy_state> self) {
   return {
     // from sink_type
-    [=](node_info& ni, const actor& observer) {
+    [=](node_info& ni) {
       self->state.data[ni.source_node].node = std::move(ni);
-      if (observer != invalid_actor)
-        self->send(observer, ok_atom::value, nexus_type{self});
     },
     [=](ram_usage& ru) {
       self->state.data[ru.source_node].ram = std::move(ru);
@@ -59,10 +57,10 @@ nexus_proxy(nexus_proxy_type::stateful_pointer<nexus_proxy_state> self) {
       self->state.data.erase(nd.source_node);
     },
     // from nexus_type
-    [=](const add_listener&) {
+    [=](add_atom, const actor&) {
       // TODO
     },
-    [=](const add_typed_listener&) {
+    [=](add_atom, const listener_type&) {
       // TODO
     },
     // from nexus_proxy_type

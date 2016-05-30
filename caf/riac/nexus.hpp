@@ -39,7 +39,7 @@ private:
   template <class... Ts>
   void broadcast(Ts&... xs) {
     for (auto& l : listeners_)
-      send(actor_cast<actor>(l), xs...);
+      send(l, xs...);
   }
 
   void add(listener_type hdl);

@@ -24,9 +24,9 @@
 #include <vector>
 #include <cstdint>
 
-#include "caf/optional.hpp"
 #include "caf/actor.hpp"
 #include "caf/node_id.hpp"
+#include "caf/optional.hpp"
 #include "caf/typed_actor.hpp"
 
 #include "caf/io/network/interfaces.hpp"
@@ -76,6 +76,10 @@ void serialize(T& in_or_out, node_info& x, const unsigned int) {
 struct node_disconnected {
   node_id source_node;
 };
+
+inline std::string to_string(const node_disconnected& x) {
+  return "node_disconnected" + deep_to_string_as_tuple(x.source_node);
+}
 
 template <class T>
 void serialize(T& in_or_out, node_disconnected& x, const unsigned int) {
@@ -191,7 +195,7 @@ void serialize(T& in_or_out, probe_data& x, const unsigned int) {
 using probe_data_map = std::map<node_id, probe_data>;
 
 /// An event sink consuming messages from the probes.
-using sink_type = typed_actor<reacts_to<node_info, actor>,
+using sink_type = typed_actor<reacts_to<node_info>,
                               reacts_to<ram_usage>,
                               reacts_to<work_load>,
                               reacts_to<new_route>,
@@ -202,27 +206,9 @@ using sink_type = typed_actor<reacts_to<node_info, actor>,
 
 using listener_type = sink_type::extend<reacts_to<probe_data_map>>;
 
-struct add_listener {
-  actor listener;
-};
-
-template <class T>
-void serialize(T& in_or_out, add_listener& x, const unsigned int) {
-  in_or_out & x.listener;
-}
-
-struct add_typed_listener {
-  listener_type listener;
-};
-
-template <class T>
-void serialize(T& in_or_out, add_typed_listener& x, const unsigned int) {
-  in_or_out & x.listener;
-}
-
 /// The expected type of the nexus.
-using nexus_type = sink_type::extend<reacts_to<add_listener>,
-                                     reacts_to<add_typed_listener>>;
+using nexus_type = sink_type::extend<reacts_to<add_atom, actor>,
+                                     reacts_to<add_atom, listener_type>>;
 
 } // namespace riac
 } // namespace caf
