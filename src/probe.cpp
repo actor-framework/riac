@@ -19,7 +19,11 @@
 
 #include "caf/riac/probe.hpp"
 
+#ifdef CAF_WINDOWS
+#include <Winsock2.h>
+#else
 #include <unistd.h>
+#endif
 
 #include <cstring>
 #include <fstream>
