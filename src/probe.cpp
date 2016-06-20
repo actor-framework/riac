@@ -57,15 +57,17 @@ std::string hostname() {
 
 class fwd_hook : public io::hook {
 public:
-  fwd_hook(actor_system& sys, nexus_type uplink)
-      : self_(sys, true),
-        uplink_(uplink),
+  fwd_hook(actor_system& sys)
+      : io::hook(sys),
+        self_(sys, true),
+        uplink_(unsafe_actor_handle_init),
         node_(sys.node()) {
     // nop
   }
 
-  void register_at_nexus() {
+  void register_at_nexus(nexus_type uplink) {
     CAF_ASSERT(self_.home_system().node() != invalid_node_id);
+    uplink_ = std::move(uplink);
     node_info ni;
     ni.source_node = self_.home_system().node();
     ni.interfaces = io::network::interfaces::list_all();
@@ -87,73 +89,63 @@ public:
 
   template<class T, class... Ts>
   void transmit(Ts&&... args) {
-    self_->send(uplink_, T{std::forward<Ts>(args)...});
+    if (! uplink_.unsafe())
+      self_->send(uplink_, T{std::forward<Ts>(args)...});
   }
 
-  void message_received_cb(const node_id& src, const strong_actor_ptr& from,
-                           const strong_actor_ptr& dest, message_id mid,
+  void message_received_cb(const node_id&, const strong_actor_ptr& from,
+                           const strong_actor_ptr& dest, message_id,
                            const message& msg) override {
     transmit<new_message>(node(from), node(dest), id(from), id(dest), msg);
-    call_next<message_received>(src, from, dest, mid, msg);
   }
 
-  void message_sent_cb(const strong_actor_ptr& from, const node_id& hop,
-                       const strong_actor_ptr& dest, message_id mid,
+  void message_sent_cb(const strong_actor_ptr& from, const node_id&,
+                       const strong_actor_ptr& dest, message_id,
                        const message& msg) override {
     // avoid endless recursion
-    if (dest == uplink_)
+    if (uplink_.unsafe() || dest == uplink_)
       return;
     transmit<new_message>(node(from), node(dest), id(from), id(dest), msg);
-    call_next<message_sent>(from, hop, dest, mid, msg);
   }
 
-  void message_forwarded_cb(const io::basp::header& hdr,
-                            const std::vector<char>* payload) override {
+  void message_forwarded_cb(const io::basp::header&,
+                            const std::vector<char>*) override {
     // do nothing (yet)
-    call_next<message_forwarded>(hdr, payload);
   }
 
-  void message_forwarding_failed_cb(const io::basp::header& hdr,
-                                    const std::vector<char>* payload) override {
+  void message_forwarding_failed_cb(const io::basp::header&,
+                                    const std::vector<char>*) override {
     // do nothing (yet)
-    call_next<message_forwarding_failed>(hdr, payload);
   }
 
-  void message_sending_failed_cb(const strong_actor_ptr& from,
-                                 const strong_actor_ptr& dest, message_id mid,
-                                 const message& payload) override {
+  void message_sending_failed_cb(const strong_actor_ptr&,
+                                 const strong_actor_ptr&, message_id,
+                                 const message&) override {
     // do nothing (yet)
-    call_next<message_sending_failed>(from, dest, mid, payload);
   }
 
   void actor_published_cb(const strong_actor_ptr& addr,
-                          const std::set<std::string>& ifs,
+                          const std::set<std::string>&,
                           uint16_t port) override {
     transmit<new_actor_published>(node_, addr, port);
-    call_next<actor_published>(addr, ifs, port);
   }
 
-  void new_remote_actor_cb(const strong_actor_ptr& addr) override {
+  void new_remote_actor_cb(const strong_actor_ptr&) override {
     // do nothing (yet)
-    call_next<new_remote_actor>(addr);
   }
 
   void new_connection_established_cb(const node_id& dest) override {
     transmit<new_route>(node_, dest, true);
-    call_next<new_connection_established>(dest);
   }
 
-  void new_route_added_cb(const node_id& via, const node_id& dest) override {
+  void new_route_added_cb(const node_id&, const node_id& dest) override {
     transmit<new_route>(node_, dest, false);
-    call_next<new_route_added>(via, dest);
   }
 
-  void invalid_message_received_cb(const node_id& source,
-                                   const strong_actor_ptr& sender,
-                                   actor_id invalid_dest, message_id mid,
-                                   const message& msg) override {
+  void invalid_message_received_cb(const node_id&, const strong_actor_ptr&,
+                                   actor_id, message_id,
+                                   const message&) override {
     // do nothing (yet)
-    call_next<invalid_message_received>(source, sender, invalid_dest, mid, msg);
   }
 
 private:
@@ -182,8 +174,16 @@ void probe::start() {
                   << CAF_ARG(e.what()));
     return;
   }
-  auto ptr = system_.middleman().add_hook<fwd_hook>(uplink_);
-  ptr->register_at_nexus();
+  auto is_fwd_hook = [](const io::hook_uptr& ptr) {
+    return typeid(ptr.get()) == typeid(io::hook*);
+  };
+  auto& hooks = system_.middleman().hooks();
+  auto e = hooks.end();
+  auto i = std::find_if(hooks.begin(), e, is_fwd_hook);
+  if (i == e)
+    CAF_LOG_ERROR("unable to find fwd_hook!");
+  else
+    static_cast<fwd_hook*>(i->get())->register_at_nexus(uplink_);
 }
 
 void probe::stop() {
@@ -195,6 +195,7 @@ void probe::init(actor_system_config& cfg) {
   add_message_types(cfg);
   nexus_port_ = cfg.nexus_port;
   nexus_host_ = std::move(cfg.nexus_host);
+  cfg.add_hook_type<fwd_hook>();
 }
 
 actor_system::module::id_t probe::id() const {
